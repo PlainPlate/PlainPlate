@@ -1,6 +1,6 @@
 # Plain Plate v0.1
 
-Grams-first food tracker. Official food data (Ciqual 2025), Greek and English, no accounts. Everything stays on the phone.
+Just another grams-first food tracker. Coded with vibes. Official food data (Ciqual 2025), Greek and English, no accounts. Everything stays on the phone.
 
 ## Install on a phone
 
