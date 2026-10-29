@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="32" height="32">
+  <title>Plain Plate</title>
+  <rect x="1.5" y="1.5" width="177" height="177" rx="40" fill="#F5F6F3" stroke="#D9DCD5" stroke-width="3"/>
+  <circle cx="90" cy="90" r="64" fill="#FFFFFF" stroke="#D9DCD5" stroke-width="3"/>
+  <circle cx="90" cy="90" r="46" fill="none" stroke="#E2E4DF" stroke-width="18"/>
+  <circle cx="90" cy="90" r="46" fill="none" stroke="#2B4C9B" stroke-width="18" stroke-linecap="round" stroke-dasharray="202 289" transform="rotate(-90 90 90)"/>
+</svg>
