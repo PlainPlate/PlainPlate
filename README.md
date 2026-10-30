@@ -1,4 +1,4 @@
-# Plain Plate v0.2
+# Plain Plate v0.3.0
 
 Just another grams-first food tracker. Coded with vibes. Official food data (Ciqual 2025), Greek and English, no accounts. Everything stays on the phone.
 
@@ -8,6 +8,10 @@ Just another grams-first food tracker. Coded with vibes. Official food data (Ciq
 - **iPhone (Safari):** open the address → Share → **Add to Home Screen**.
 
 After the first visit it works offline. Barcode lookups need internet.
+
+## Your data
+
+Everything is stored only on the phone. Settings → Backup exports a file; the app reminds you to back up on an interval you choose (default every 7 days).
 
 ## Data and credits
 

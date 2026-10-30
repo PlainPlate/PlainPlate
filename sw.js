@@ -1,5 +1,5 @@
 /* Plain Plate service worker: caches the app so it works offline. Bump VERSION on every release. */
-const VERSION = 'pp-v0.2.1';
+const VERSION = 'pp-v0.3.0';
 const SHELL = [
   './', 'index.html', 'styles.css', 'app.js', 'foods.json', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/favicon.svg', 'icons/favicon-32.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',

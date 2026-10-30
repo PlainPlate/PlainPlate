@@ -2,6 +2,8 @@
 'use strict';
 
 /* ---------- Constants ---------- */
+// App version shown in Settings. On every release, bump this AND the VERSION in sw.js to match.
+const APP_VERSION = '0.3.0';
 const STORE_KEY = 'plainplate.v1';
 const LIFE = { sit: 1.55, feet: 1.85, heavy: 2.20 }; // FAO/WHO/UNU 2004 PAL, middle of each range
 const GOALS = { maintain: { gentle: 0, standard: 0 }, lose: { gentle: -0.10, standard: -0.20 }, gain: { gentle: 0.05, standard: 0.10 } };
@@ -94,6 +96,9 @@ const T = {
       'Fonts: Commissioner and JetBrains Mono (SIL Open Font License).'],
     days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     acts: { strength: 'Strength training, moderate', strength_hard: 'Strength training, vigorous', bodyweight: 'Bodyweight or resistance bands', walk: 'Walking, moderate pace', walk_brisk: 'Walking, brisk', hike: 'Hiking', run: 'Running (~10 min/mile)', cycle_easy: 'Cycling, easy', cycle: 'Cycling, general', cycle_indoor: 'Indoor cycling, moderate', swim: 'Swimming laps, easy', yoga: 'Yoga', pilates: 'Pilates', dance: 'Dancing', zumba: 'Zumba', circuit: 'Circuit training', elliptical: 'Elliptical trainer', rowing: 'Rowing machine', tennis: 'Tennis', football: 'Football (casual)', basketball: 'Basketball', martial: 'Martial arts, practice', rope: 'Jump rope' },
+    saveMeal: 'Save as a meal', myMeals: 'My meals', mealSaved: 'Meal saved', mealNameDef: m => `My ${m}`, addedN: n => `Added ${n} ${n === 1 ? 'item' : 'items'}`, sameAsLast: m => `Same as last ${m}`, noMeals: 'Save a meal from any meal screen to add it again in one tap.', mealDelQ: 'Delete this saved meal?',
+    bkRemind: 'Remind me to back up', bkEvery: 'Every how many days', bkLast: x => `Last backup: ${x}`, bkNever: 'never', ago: n => n === 0 ? 'today' : n === 1 ? 'yesterday' : `${n} days ago`,
+    bkDue: x => `Last backup: ${x}. Your log is stored only on this phone, so a backup file is the only way to get it back if the phone or browser data is lost.`, bkNow: 'Back up now', bkLater: 'Later', bkDone: 'Backup saved', bkHint: 'Keep the file somewhere off this phone: Drive, email or a computer.',
     showDetails: 'Show details', hideDetails: 'Hide details',     inMeal: 'In this meal', done: 'Done', mealHint: 'Search and add each part of the meal. This screen stays open until you tap Done.', items: n => `${n} ${n === 1 ? 'item' : 'items'}`, addedTo: m => `Added to ${m}`,
     segG: 'Grams', segPc: 'Pieces', segTsp: 'Teaspoon', segTbsp: 'Tablespoon', pc: n => num(n) === 1 ? 'pc' : 'pcs', pcLong: 'piece', sizeS: 'Small', sizeM: 'Medium', sizeL: 'Large', sizeXL: 'XL', sizeMine: 'My own', eggNote: 'egg box size, shell removed', pieceTypical: s => `typical ${s.toLowerCase()}`, pieceAsk: 'Grams in 1 piece', pieceHint: 'Weigh one once and it is remembered for this food.', tsp: 'tsp', tbsp: 'tbsp', tspLong: 'teaspoon', tbspLong: 'tablespoon', measureIn: 'Measure in', spoonIs: (u, g) => `1 ${u} = ${g} g`, spoonTypical: 'typical level spoon', spoonMine: 'your own value',
     spoonAsk: u => `Grams in 1 level ${u}`, spoonHint: 'Weigh one spoonful once and it is remembered for this food. A heaped spoon can weigh up to about twice as much.', gApprox: g => `≈ ${g} g`,
@@ -144,6 +149,9 @@ const T = {
       'Γραμματοσειρές: Commissioner και JetBrains Mono (SIL Open Font License).'],
     days: ['Κυρ', 'Δευ', 'Τρί', 'Τετ', 'Πέμ', 'Παρ', 'Σάβ'], months: ['Ιαν', 'Φεβ', 'Μαρ', 'Απρ', 'Μαΐ', 'Ιουν', 'Ιουλ', 'Αυγ', 'Σεπ', 'Οκτ', 'Νοε', 'Δεκ'],
     acts: { strength: 'Βάρη, μέτρια ένταση', strength_hard: 'Βάρη, υψηλή ένταση', bodyweight: 'Βάρος σώματος ή λάστιχα', walk: 'Περπάτημα, μέτριο', walk_brisk: 'Περπάτημα, γρήγορο', hike: 'Πεζοπορία', run: 'Τρέξιμο (~6 λεπτά/χλμ)', cycle_easy: 'Ποδήλατο, χαλαρά', cycle: 'Ποδήλατο, γενικά', cycle_indoor: 'Στατικό ποδήλατο, μέτριο', swim: 'Κολύμπι, χαλαρές διαδρομές', yoga: 'Γιόγκα', pilates: 'Πιλάτες', dance: 'Χορός', zumba: 'Ζούμπα', circuit: 'Κυκλική προπόνηση', elliptical: 'Ελλειπτικό', rowing: 'Κωπηλατική μηχανή', tennis: 'Τένις', football: 'Ποδόσφαιρο (χαλαρό)', basketball: 'Μπάσκετ', martial: 'Πολεμικές τέχνες, εξάσκηση', rope: 'Σχοινάκι' },
+    saveMeal: 'Αποθήκευση ως γεύμα', myMeals: 'Τα γεύματά μου', mealSaved: 'Το γεύμα αποθηκεύτηκε', mealNameDef: m => `Το ${m} μου`, addedN: n => `Προστέθηκαν ${n}`, sameAsLast: m => `Ίδιο με το προηγούμενο ${m}`, noMeals: 'Αποθήκευσε ένα γεύμα από την οθόνη κάθε γεύματος για να το ξαναβάζεις με ένα πάτημα.', mealDelQ: 'Διαγραφή αυτού του γεύματος;',
+    bkRemind: 'Υπενθύμιση για αντίγραφο ασφαλείας', bkEvery: 'Κάθε πόσες μέρες', bkLast: x => `Τελευταίο αντίγραφο: ${x}`, bkNever: 'ποτέ', ago: n => n === 0 ? 'σήμερα' : n === 1 ? 'χθες' : `πριν από ${n} μέρες`,
+    bkDue: x => `Τελευταίο αντίγραφο: ${x}. Τα δεδομένα σου υπάρχουν μόνο σε αυτό το κινητό, οπότε ένα αρχείο αντιγράφου είναι ο μόνος τρόπος να τα πάρεις πίσω αν χαθεί το κινητό ή τα δεδομένα του browser.`, bkNow: 'Αντίγραφο τώρα', bkLater: 'Αργότερα', bkDone: 'Το αντίγραφο αποθηκεύτηκε', bkHint: 'Κράτα το αρχείο κάπου εκτός κινητού: Drive, email ή υπολογιστή.',
     showDetails: 'Λεπτομέρειες', hideDetails: 'Απόκρυψη',     inMeal: 'Σε αυτό το γεύμα', done: 'Τέλος', mealHint: 'Ψάξε και πρόσθεσε κάθε κομμάτι του γεύματος. Η οθόνη μένει ανοιχτή μέχρι να πατήσεις «Τέλος».', items: n => `${n} ${n === 1 ? 'τροφή' : 'τροφές'}`, addedTo: m => `Προστέθηκε: ${m}`,
     segG: 'Γραμμάρια', segPc: 'Τεμάχια', segTsp: 'Κουταλάκι', segTbsp: 'Κουτάλι', pc: () => 'τεμ.', pcLong: 'τεμάχιο', sizeS: 'Μικρό', sizeM: 'Μεσαίο', sizeL: 'Μεγάλο', sizeXL: 'XL', sizeMine: 'Δικό μου', eggNote: 'μέγεθος συσκευασίας, χωρίς τσόφλι', pieceTypical: s => `τυπικό ${s.toLowerCase()}`, pieceAsk: 'Γραμμάρια σε 1 τεμάχιο', pieceHint: 'Ζύγισε ένα μία φορά και θα το θυμάται για αυτή την τροφή.', tsp: 'κ.γ.', tbsp: 'κ.σ.', tspLong: 'κουταλάκι του γλυκού', tbspLong: 'κουτάλι της σούπας', measureIn: 'Μέτρηση σε', spoonIs: (u, g) => `1 ${u} = ${g} g`, spoonTypical: 'τυπική κοφτή κουταλιά', spoonMine: 'δική σου τιμή',
     spoonAsk: u => `Γραμμάρια σε 1 κοφτό ${u}`, spoonHint: 'Ζύγισε μία κουταλιά μία φορά και θα τη θυμάται για αυτή την τροφή. Μια γεμάτη κουταλιά μπορεί να ζυγίζει έως και περίπου τα διπλά.', gApprox: g => `≈ ${g} g`,
@@ -158,7 +166,7 @@ let ob = null; // onboarding draft
 let ui = { moreOpen: false, query: '', plan: { mode: 'set', unit: 'kcal', amount: 100, food: { src: 'c', id: 9100 } } };
 
 function blank() {
-  return { v: 1, lang: (navigator.language || 'en').toLowerCase().startsWith('el') ? 'el' : 'en', profile: null, log: {}, myFoods: [], weights: [], recent: [], calib: null, sumOpen: false, spoon: {}, piece: {} };
+  return { v: 1, lang: (navigator.language || 'en').toLowerCase().startsWith('el') ? 'el' : 'en', profile: null, log: {}, myFoods: [], weights: [], recent: [], calib: null, sumOpen: false, spoon: {}, piece: {}, meals: [], backup: { on: true, days: 7, last: null, since: null, snooze: null } };
 }
 function load() {
   try { const s = JSON.parse(localStorage.getItem(STORE_KEY)); if (s && s.v === 1) return Object.assign(blank(), s); } catch (e) { }
@@ -312,6 +320,40 @@ function dayInfo(ds) {
   else target = workout ? (c.extras[dow] > 0 ? c.perDay[dow] : c.workout) : c.rest;
   return { target, workout, bmr: c.bmr };
 }
+
+/* ---------- Backup ---------- */
+const daysSince = d => Math.round((parseD(todayStr()) - parseD(d)) / 864e5);
+function backupDue() {
+  const b = S.backup; if (!b.since) { b.since = Object.keys(S.log).sort()[0] || todayStr(); save(); } // existing users: count from their first logged day
+  if (!b.on || b.snooze === todayStr()) return null;
+  const n = daysSince(b.last || b.since);
+  return n >= (Number(b.days) || 7) ? (b.last ? t('ago')(daysSince(b.last)) : t('bkNever')) : null;
+}
+async function doBackup() {
+  const name = `plain-plate-backup-${todayStr()}.json`, json = JSON.stringify(S, null, 1);
+  const done = () => { S.backup.last = todayStr(); S.backup.snooze = null; save(); toast(t('bkDone')); render(); };
+  try {
+    const file = new File([json], name, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); done(); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  const a2 = document.createElement('a'); a2.href = URL.createObjectURL(new Blob([json], { type: 'application/json' })); a2.download = name; document.body.appendChild(a2); a2.click(); a2.remove(); done();
+}
+
+/* ---------- Saved meals ---------- */
+const ENTRY_KEEP = ['src', 'ref', 'name', 'tag', 'n', 'grams', 'unit', 'qty', 'gpt', 'gpp', 'size', 'state', 'approx'];
+const stripEntry = e => Object.fromEntries(ENTRY_KEEP.filter(k => e[k] != null).map(k => [k, e[k]]));
+function copyEntry(x, meal) { // fresh copy for a new day, with the food's current values
+  const f = getFood(x.src, x.ref), e = Object.assign(stripEntry(x), { meal, at: Date.now() });
+  if (f) { e.name = f.name; e.tag = f.tag; e.n = f.n; }
+  return e;
+}
+function addEntries(ds, meal, list) {
+  if (!list.length) return;
+  const L = S.log[ds] || (S.log[ds] = { entries: [], complete: false });
+  list.forEach(x => L.entries.push(copyEntry(x, meal))); save(); toast(t('addedN')(list.length)); render();
+}
+const listKcal = list => list.reduce((a, x) => { const f = getFood(x.src, x.ref); const n0 = f ? f.n[0] : (x.n || [])[0]; return a + (n0 || 0) * x.grams / 100; }, 0);
+function lastMeal(ds, meal) { for (let i = 1; i <= 14; i++) { const d = addDays(ds, -i), it = mealItems(d, meal); if (it.length) return { d, items: it.map(([e]) => e) }; } return null; }
 
 /* ---------- Totals ---------- */
 function entryNut(e) { return e.n.map(v => v == null ? null : v * e.grams / 100); }
@@ -525,6 +567,7 @@ function vToday(q) {
   }).join('');
   return `<div class="row between" style="min-height:44px"><div class="row" style="gap:2px"><a class="iconbtn" href="#/?d=${addDays(ds, -1)}" aria-label="−1">${icon.back}</a><h1 style="font-size:22px">${esc(isToday ? t('today') : dayLabel(ds))}</h1>${!isToday ? `<a class="iconbtn" href="#/?d=${addDays(ds, 1)}" aria-label="+1">${icon.fwd}</a>` : ''}</div>
       <button class="chip" data-a="toggleType" data-d="${ds}" style="background:var(--accent-soft);color:var(--accent);border-color:transparent;font-weight:500">${esc(info.workout ? t('workoutDay') : t('restDay'))}</button></div>
+    ${isToday && backupDue() ? `<div class="note info col" style="gap:10px;align-items:stretch"><div class="row" style="gap:10px;align-items:flex-start">${icon.info}<span>${esc(t('bkDue')(backupDue()))}</span></div><div class="grid2"><button class="btn" data-a="backup" style="height:44px;font-size:15px">${esc(t('bkNow'))}</button><button class="btn secondary" data-a="bkLater" style="height:44px;font-size:15px">${esc(t('bkLater'))}</button></div></div>` : ''}
     ${summary}
     ${approx ? `<div class="note approx">${icon.info}<span>${esc(t('approxToday')(approx))}</span></div>` : ''}
     ${partial ? `<div class="note plain">${icon.info}<span>${esc(t('partialDay'))}</span></div>` : ''}
@@ -545,22 +588,31 @@ function vAdd(q) {
   const href = f => `#/food?src=${f.src}&id=${encodeURIComponent(f.id)}&meal=${meal}&d=${ds}`;
   const rowC = f => { const p = PAIR.get(f.id); const name = (S.lang === 'el' && f.el) || f.en; return `<a class="item" href="#/food?src=c&id=${f.id}&meal=${meal}&d=${ds}"><div class="grow"><div class="name">${esc(name)}</div><div class="tags"><span class="tag">Ciqual</span>${p ? `<span class="xs" style="color:var(--accent)">${esc(t('weighDryOrCooked'))}</span>` : ''}</div></div><span class="mono xs muted" style="text-align:right">${fmt(f.n[0])}<br>${esc(t('per100'))}</span></a>`; };
   const rowG = f => `<a class="item" href="${href(f)}"><div class="grow"><div class="name">${esc(f.name)}</div><div class="tags"><span class="tag">${esc(f.tag)}</span></div></div><span class="mono xs muted" style="text-align:right">${fmt(f.n[0])}<br>${esc(t('per100'))}</span></a>`;
-  const mealList = items.length
+  const prev = items.length ? null : lastMeal(ds, meal);
+  const repeat = prev ? `<button class="card row" data-a="repeatLast" data-v="${prev.d}" style="width:100%;text-align:left;cursor:pointer;gap:12px;border-color:var(--accent)"><span style="color:var(--accent)">${icon.plus}</span><span class="grow"><span style="font-weight:600;display:block">${esc(t('sameAsLast')(t(meal).toLowerCase()))}</span><span class="xs muted">${esc(dayLabel(prev.d))} · ${esc(t('items')(prev.items.length))} · <span class="mono">${fmt(listKcal(prev.items))}</span> kcal</span></span></button>` : '';
+  const mealRow = m => `<button class="item" data-a="mealUse" data-v="${esc(m.id)}"><span style="color:var(--accent)">${icon.plus}</span><div class="grow"><div class="name">${esc(m.name)}</div><div class="tags"><span class="xs muted">${esc(t('items')(m.items.length))} · <span class="mono">${fmt(listKcal(m.items))}</span> kcal</span></div></div></button>`;
+  const savedMeals = S.meals.filter(m => !qs || norm(m.name).includes(norm(qs)));
+  const mealsHtml = savedMeals.length ? `<div class="col" style="gap:6px"><span class="sectionlbl">${esc(t('myMeals'))}</span><div class="card tight list">${savedMeals.map(mealRow).join('')}</div></div>` : '';
+  const saveBox = !items.length ? '' : ui.saveMeal != null
+    ? `<div class="card col" style="gap:10px"><label class="field"><span class="lbl">${esc(t('name'))}</span><input id="mealname" class="input" data-in="mealName" value="${esc(ui.saveMeal)}"></label><div class="grid2"><button class="btn" data-a="mealSave" style="height:44px;font-size:15px">${esc(t('save'))}</button><button class="btn secondary" data-a="mealSaveCancel" style="height:44px;font-size:15px">${esc(t('cancel'))}</button></div></div>`
+    : `<button class="btn ghost" data-a="mealSaveOpen" style="height:40px;justify-content:flex-start;padding:0 4px">${icon.plus}${esc(t('saveMeal'))}</button>`;
+  const mealList = repeat + (items.length
     ? `<div class="col" style="gap:6px"><div class="row between" style="padding:0 4px"><span class="sectionlbl" style="padding:0">${esc(t('inMeal'))}</span><span class="mono small muted">${fmt(sum)} kcal</span></div>
-      <div class="card tight list">${items.map(([e, i]) => `<a class="item" href="#/food?d=${ds}&edit=${i}&from=add"><div class="grow"><div class="name">${esc((getFood(e.src, e.ref) || e).name)}</div><div class="tags"><span class="mono xs muted">${esc(amountLabel(e))}</span>${e.approx ? `<span class="tag approx">${esc(t('approx'))}</span>` : ''}</div></div><span class="mono">${fmt(entryNut(e)[0])}</span></a>`).join('')}</div></div>`
-    : `<p class="small muted" style="padding:0 4px">${esc(t('mealHint'))}</p>`;
+      <div class="card tight list">${items.map(([e, i]) => `<a class="item" href="#/food?d=${ds}&edit=${i}&from=add"><div class="grow"><div class="name">${esc((getFood(e.src, e.ref) || e).name)}</div><div class="tags"><span class="mono xs muted">${esc(amountLabel(e))}</span>${e.approx ? `<span class="tag approx">${esc(t('approx'))}</span>` : ''}</div></div><span class="mono">${fmt(entryNut(e)[0])}</span></a>`).join('')}</div>${saveBox}</div>`
+    : `<p class="small muted" style="padding:0 4px">${esc(t('mealHint'))}</p>`);
   return `<div class="head">${backBtn('/?d=' + ds)}<div class="col" style="gap:0"><h1 style="font-size:22px">${esc(t(meal))}</h1>${ds !== todayStr() ? `<span class="xs muted">${esc(dayLabel(ds))}</span>` : ''}</div></div>
     <div class="row"><label class="search grow">${icon.search}<span class="sr">${esc(t('searchPh'))}</span><input type="search" id="q" placeholder="${esc(t('searchPh'))}" value="${esc(qs)}" data-in="query" autocomplete="off"></label>
       <a class="iconbtn" href="#/scan?meal=${meal}&d=${ds}" aria-label="${esc(t('scan'))}" style="border:1px solid var(--chip);background:var(--card);width:48px;height:48px">${icon.barcode}</a></div>
-    <div id="results" class="col" style="gap:16px">${addResults(qs, recents, mine, res, rowC, rowG, mealList)}</div>
+    <div id="results" class="col" style="gap:16px">${addResults(qs, recents, mine, res, rowC, rowG, mealList, mealsHtml)}</div>
     <div class="col card" style="border-style:dashed;gap:10px"><h2>${esc(t('cantFind'))}</h2>
       <p class="small muted">${esc(t('closest'))}: ${esc(t('closestHint'))}</p>
       <a class="btn secondary" href="#/myfood?meal=${meal}&d=${ds}">${esc(t('createMy'))} · <span class="small muted">${esc(t('createMyHint'))}</span></a></div>
     <div class="donebar"><a class="btn" href="#/?d=${ds}">${esc(t('done'))}${items.length ? ` <span style="font-weight:500;opacity:.85">· ${esc(t('items')(items.length))} · <span class="mono">${fmt(sum)}</span> kcal</span>` : ''}</a></div>`;
 }
-function addResults(qs, recents, mine, res, rowC, rowG, mealList) {
+function addResults(qs, recents, mine, res, rowC, rowG, mealList, mealsHtml) {
   let h = '';
   if (!qs) h += mealList;
+  h += mealsHtml;
   if (!qs && recents.length) h += `<div class="col" style="gap:6px"><span class="sectionlbl">${esc(t('recent'))}</span><div class="card tight list">${recents.map(rowG).join('')}</div></div>`;
   if (mine.length) h += `<div class="col" style="gap:6px"><span class="sectionlbl">${esc(t('myFoods'))}</span><div class="card tight list">${mine.slice(0, 20).map(f => rowG(getFood('m', f.id))).join('')}</div></div>`;
   if (qs) h += `<div class="col" style="gap:6px"><span class="sectionlbl">${esc(t('foods'))}</span>${res.length ? `<div class="card tight list">${res.map(rowC).join('')}</div>` : `<p class="small muted" style="padding:0 4px">${esc(t('noResults'))}</p>`}</div>`;
@@ -817,10 +869,14 @@ function vSettings() {
         <label class="field"><span class="lbl">${esc(t('sProteinT'))}</span><input class="input mono" inputmode="numeric" data-in="proteinT" value="${esc(p.proteinT || '')}"></label>
       </div></div>
     <div class="col" style="gap:6px"><span class="sectionlbl">${esc(t('sMyFoods'))}</span><div class="card tight list">${S.myFoods.map(f => `<a class="item" href="#/myfood?id=${encodeURIComponent(f.id)}"><span class="grow name">${esc(f.name)}</span><span class="mono xs muted">${fmt(f.n[0])} ${esc(t('per100'))}</span></a>`).join('')}<a class="item" href="#/myfood" style="color:var(--accent);min-height:48px">${icon.plus}<span>${esc(t('createMy'))}</span></a></div></div>
-    <div class="col" style="gap:6px"><span class="sectionlbl">${esc(t('sBackup'))}</span><div class="card col" style="gap:10px"><p class="xs muted">${esc(t('offline'))}</p><button class="btn secondary" data-a="export">${esc(t('sExport'))}</button><label class="btn secondary" style="cursor:pointer">${esc(t('sImport'))}<input type="file" accept="application/json,.json" data-a="import" class="sr"></label></div></div>
+    <div class="col" style="gap:6px"><span class="sectionlbl">${esc(t('myMeals'))}</span><div class="card tight list">${S.meals.length ? S.meals.map(m => `<div class="item" style="min-height:52px"><div class="grow"><div class="name">${esc(m.name)}</div><div class="xs muted">${esc(t('items')(m.items.length))} · <span class="mono">${fmt(listKcal(m.items))}</span> kcal</div></div><button class="iconbtn" data-a="mealDel" data-v="${esc(m.id)}" aria-label="${esc(t('delete'))}">✕</button></div>`).join('') : `<p class="xs muted" style="padding:14px 0">${esc(t('noMeals'))}</p>`}</div></div>
+    <div class="col" style="gap:6px"><span class="sectionlbl">${esc(t('sBackup'))}</span><div class="card col" style="gap:10px"><p class="small">${esc(t('bkLast')(S.backup.last ? t('ago')(daysSince(S.backup.last)) : t('bkNever')))}</p><p class="xs muted">${esc(t('bkHint'))}</p>
+      <label class="check"><input type="checkbox" data-a="bkOn" ${S.backup.on ? 'checked' : ''}>${esc(t('bkRemind'))}</label>
+      ${S.backup.on ? `<label class="row between"><span class="small">${esc(t('bkEvery'))}</span><input class="input mono" inputmode="numeric" data-in="bkDays" value="${esc(S.backup.days)}" style="width:90px;text-align:center"></label>` : ''}
+      <button class="btn secondary" data-a="backup">${esc(t('sExport'))}</button><label class="btn secondary" style="cursor:pointer">${esc(t('sImport'))}<input type="file" accept="application/json,.json" data-a="import" class="sr"></label></div></div>
     <a class="btn ghost" href="#/about">${esc(t('sAbout'))}</a>
     <button class="btn danger" data-a="reset">${esc(t('sReset'))}</button>
-    <p class="xs muted" style="text-align:center">Plain Plate v0.2 · ${esc(t('installHint'))}</p>`;
+    <p class="xs muted" style="text-align:center">Plain Plate v${APP_VERSION} · ${esc(t('installHint'))}</p>`;
 }
 let own = null;
 function vOwn() {
@@ -844,7 +900,7 @@ function afterRender(path, q) {
   if (path !== '/food') fd = null;
   if (path !== '/myfood') mf = null;
   if (path !== '/own') own = null;
-  if (path !== '/add') ui.query = '';
+  if (path !== '/add') { ui.query = ''; ui.saveMeal = null; }
   window.scrollTo(0, 0);
 }
 
@@ -922,6 +978,15 @@ document.addEventListener('click', e => {
     case 'redo': startOnboarding(true); break;
     case 'useCalc': S.profile.custom = null; save(); render(); break;
     case 'ownSave': { const r = num(own.rest), w = num(own.workout); if (!r || r < 500) return; S.profile.custom = { rest: Math.round(r), workout: w ? Math.round(w) : null }; save(); toast(t('saved')); go('/'); break; }
+    case 'backup': doBackup(); break;
+    case 'bkLater': S.backup.snooze = todayStr(); save(); render(); break;
+    case 'repeatLast': { const meal = q.meal || defaultMeal(), ds = q.d || todayStr(); addEntries(ds, meal, mealItems(v, meal).map(([e]) => e)); break; }
+    case 'mealUse': { const m = S.meals.find(x => x.id === v); if (m) addEntries(q.d || todayStr(), q.meal || defaultMeal(), m.items); break; }
+    case 'mealSaveOpen': { ui.saveMeal = t('mealNameDef')(t(q.meal || defaultMeal()).toLowerCase()); render(); const mi = document.getElementById('mealname'); if (mi) { mi.focus(); mi.select(); } break; }
+    case 'mealSaveCancel': ui.saveMeal = null; render(); break;
+    case 'mealSave': { const name = (ui.saveMeal || '').trim(); if (!name) return; const items = mealItems(q.d || todayStr(), q.meal || defaultMeal()).map(([e]) => stripEntry(e));
+      S.meals = [{ id: 'meal' + Date.now().toString(36), name, items }, ...S.meals]; ui.saveMeal = null; save(); toast(t('mealSaved')); render(); break; }
+    case 'mealDel': if (confirm(t('mealDelQ'))) { S.meals = S.meals.filter(m => m.id !== v); save(); render(); } break;
     case 'export': {
       const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
       const a2 = document.createElement('a'); a2.href = URL.createObjectURL(blob); a2.download = `plain-plate-backup-${todayStr()}.json`; document.body.appendChild(a2); a2.click(); a2.remove(); break;
@@ -933,6 +998,7 @@ document.addEventListener('change', e => {
   const el = e.target;
   if (el.dataset.a === 'complete') { const ds = el.dataset.d; const L = S.log[ds] || (S.log[ds] = { entries: [], complete: false }); L.complete = el.checked; save(); }
   if (el.dataset.a === 'approxSet') { fd.approx = el.checked; }
+  if (el.dataset.a === 'bkOn') { S.backup.on = el.checked; save(); render(); }
   if (el.dataset.a === 'import' && el.files[0]) {
     const r = new FileReader(); r.onload = () => { try { const d = JSON.parse(r.result); if (d && d.v === 1) { S = Object.assign(blank(), d); save(); toast(t('sImported')); go('/'); render(); } } catch (x) { toast('✕'); } }; r.readAsText(el.files[0]);
   }
@@ -955,6 +1021,8 @@ document.addEventListener('input', e => {
   if (k === 'bc') scanState.code = el.value;
   if (k === 'planAmt') { ui.plan.amount = el.value; el.style.width = (Math.max(2, el.value.length) + 0.5) + 'ch'; const tmp = document.createElement('div'); tmp.innerHTML = vPlanner({}); document.getElementById('plancards').innerHTML = tmp.querySelector('#plancards').innerHTML; }
   if (k === 'own') { own[el.dataset.k] = el.value; const c = calcTargets(S.profile || obProfile()); const low = Math.min(num(own.rest) || 99999, num(own.workout) || 99999) < c.bmr; document.getElementById('ownlow').innerHTML = low ? `<div class="note plain">${icon.info}<span>${esc(t('lowNote')(fmt(c.bmr)))}</span></div>` : ''; }
+  if (k === 'mealName') ui.saveMeal = el.value;
+  if (k === 'bkDays') { const n = Math.round(num(el.value)); if (n >= 1 && n <= 90) { S.backup.days = n; save(); } }
   if (k === 'proteinT') { S.profile.proteinT = num(el.value) || null; save(); }
 });
 function toast(msg) { document.querySelectorAll('.toast').forEach(x => x.remove()); const d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = msg; document.body.appendChild(d); setTimeout(() => d.remove(), 1800); }
