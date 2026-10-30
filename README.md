@@ -16,4 +16,5 @@ After the first visit it works offline. Barcode lookups need internet.
 - Equations: Mifflin–St Jeor; FAO/WHO/UNU 2004 activity levels; 2024 Adult Compendium of Physical Activities.
 - Reference values: WHO and EFSA, shown side by side.
 - Spoon sizes: typical grams per level tablespoon (USDA household measures, pack servings). Users can replace them with their own weighed value.
+- Piece sizes: eggs by EU box size (S/M/L/XL) with the shell removed; fruit and vegetables from USDA small/medium/large household measures. Also replaceable with a weighed value.
 - Fonts: Commissioner, JetBrains Mono (SIL Open Font License).

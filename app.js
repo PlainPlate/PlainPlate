@@ -32,6 +32,20 @@ const SPOON = [
   [/^cinnamon, powder/i, 7.8], [/^paprika, powder/i, 6.9], [/^oregano, dried/i, 3], [/^salt, /i, 18], [/^coffee, ground/i, 5]
 ];
 const SPOON_DIV = { tbsp: 1, tsp: 3 };
+// Grams of edible part in one piece. Eggs follow EU box sizes (S <53 g, M 53–63, L 63–73, XL 73+ in shell), shell removed.
+// Fruit and vegetables: USDA household measures for small / medium / large. Anything else asks the user once.
+const PIECE = [
+  [/^egg, (raw|hard-boiled|soft-boiled|poached|fried)/i, { S: 44, M: 51, L: 60, XL: 68 }, 'egg'], [/^egg white/i, { M: 34 }], [/^egg yolk/i, { M: 17 }],
+  [/^banana, flesh without skin, raw/i, { S: 101, M: 118, L: 136 }], [/^apple, .*flesh and skin.*raw/i, { S: 149, M: 182, L: 223 }], [/^apple, .*without skin, raw/i, { S: 133, M: 162, L: 198 }],
+  [/^orange, flesh/i, { S: 96, M: 131, L: 184 }], [/^clementine or mandarin orange, flesh/i, { M: 80 }], [/^tomato, cherry, raw/i, { M: 17 }],
+  [/^tomato, (raw|round, raw|long, raw|green, raw|bunch, raw)/i, { S: 91, M: 123, L: 182 }], [/^potato, (new, |peeled, |ware, peeled, )?(raw|boiled\/cooked in water)/i, { S: 170, M: 213, L: 369 }],
+  [/^onion, raw/i, { S: 70, M: 110, L: 150 }], [/^carrot, raw/i, { S: 50, M: 61, L: 72 }], [/^cucumber, flesh/i, { M: 300 }], [/^courgette or zucchini, flesh and skin, raw/i, { S: 118, M: 196, L: 323 }],
+  [/^sweet pepper, [a-z ,]*raw$/i, { S: 74, M: 119, L: 164 }], [/^peach, .*raw/i, { S: 130, M: 150, L: 175 }], [/^pear, .*raw/i, { S: 148, M: 178, L: 230 }],
+  [/^kiwi fruit/i, { M: 69, L: 91 }], [/^avocado, flesh/i, { M: 136 }], [/^lemon, flesh/i, { M: 58 }], [/^strawberry, raw/i, { M: 12, L: 18 }],
+  [/^fig, raw/i, { M: 50 }], [/^fig, dried/i, { M: 8 }], [/^plum, .*raw/i, { M: 66 }], [/^apricot, pitted, raw/i, { M: 35 }], [/^date, /i, { M: 8 }],
+  [/^olives?\b/i, { M: 4 }, null, 'x'], [/^almond, /i, { M: 1.2 }, null, 'v'], [/^rusk/i, { M: 10 }], [/^garlic, raw/i, { M: 3 }]
+];
+const SIZES = ['S', 'M', 'L', 'XL'];
 
 /* ---------- Text (Greek / English) ---------- */
 const T = {
@@ -81,7 +95,7 @@ const T = {
     days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     acts: { strength: 'Strength training, moderate', strength_hard: 'Strength training, vigorous', bodyweight: 'Bodyweight or resistance bands', walk: 'Walking, moderate pace', walk_brisk: 'Walking, brisk', hike: 'Hiking', run: 'Running (~10 min/mile)', cycle_easy: 'Cycling, easy', cycle: 'Cycling, general', cycle_indoor: 'Indoor cycling, moderate', swim: 'Swimming laps, easy', yoga: 'Yoga', pilates: 'Pilates', dance: 'Dancing', zumba: 'Zumba', circuit: 'Circuit training', elliptical: 'Elliptical trainer', rowing: 'Rowing machine', tennis: 'Tennis', football: 'Football (casual)', basketball: 'Basketball', martial: 'Martial arts, practice', rope: 'Jump rope' },
     showDetails: 'Show details', hideDetails: 'Hide details',     inMeal: 'In this meal', done: 'Done', mealHint: 'Search and add each part of the meal. This screen stays open until you tap Done.', items: n => `${n} ${n === 1 ? 'item' : 'items'}`, addedTo: m => `Added to ${m}`,
-    segG: 'Grams', segTsp: 'Teaspoon', segTbsp: 'Tablespoon', tsp: 'tsp', tbsp: 'tbsp', tspLong: 'teaspoon', tbspLong: 'tablespoon', measureIn: 'Measure in', spoonIs: (u, g) => `1 ${u} = ${g} g`, spoonTypical: 'typical level spoon', spoonMine: 'your own value',
+    segG: 'Grams', segPc: 'Pieces', segTsp: 'Teaspoon', segTbsp: 'Tablespoon', pc: n => num(n) === 1 ? 'pc' : 'pcs', pcLong: 'piece', sizeS: 'Small', sizeM: 'Medium', sizeL: 'Large', sizeXL: 'XL', sizeMine: 'My own', eggNote: 'egg box size, shell removed', pieceTypical: s => `typical ${s.toLowerCase()}`, pieceAsk: 'Grams in 1 piece', pieceHint: 'Weigh one once and it is remembered for this food.', tsp: 'tsp', tbsp: 'tbsp', tspLong: 'teaspoon', tbspLong: 'tablespoon', measureIn: 'Measure in', spoonIs: (u, g) => `1 ${u} = ${g} g`, spoonTypical: 'typical level spoon', spoonMine: 'your own value',
     spoonAsk: u => `Grams in 1 level ${u}`, spoonHint: 'Weigh one spoonful once and it is remembered for this food. A heaped spoon can weigh up to about twice as much.', gApprox: g => `≈ ${g} g`,
     offline: 'Saved on this phone', delConfirm: 'Delete this food?', yes: 'Yes', no: 'No', cancel: 'Cancel', toastAdded: 'Added', toastRemoved: 'Removed', installHint: 'To install: browser menu → "Add to Home screen".'
   },
@@ -131,7 +145,7 @@ const T = {
     days: ['Κυρ', 'Δευ', 'Τρί', 'Τετ', 'Πέμ', 'Παρ', 'Σάβ'], months: ['Ιαν', 'Φεβ', 'Μαρ', 'Απρ', 'Μαΐ', 'Ιουν', 'Ιουλ', 'Αυγ', 'Σεπ', 'Οκτ', 'Νοε', 'Δεκ'],
     acts: { strength: 'Βάρη, μέτρια ένταση', strength_hard: 'Βάρη, υψηλή ένταση', bodyweight: 'Βάρος σώματος ή λάστιχα', walk: 'Περπάτημα, μέτριο', walk_brisk: 'Περπάτημα, γρήγορο', hike: 'Πεζοπορία', run: 'Τρέξιμο (~6 λεπτά/χλμ)', cycle_easy: 'Ποδήλατο, χαλαρά', cycle: 'Ποδήλατο, γενικά', cycle_indoor: 'Στατικό ποδήλατο, μέτριο', swim: 'Κολύμπι, χαλαρές διαδρομές', yoga: 'Γιόγκα', pilates: 'Πιλάτες', dance: 'Χορός', zumba: 'Ζούμπα', circuit: 'Κυκλική προπόνηση', elliptical: 'Ελλειπτικό', rowing: 'Κωπηλατική μηχανή', tennis: 'Τένις', football: 'Ποδόσφαιρο (χαλαρό)', basketball: 'Μπάσκετ', martial: 'Πολεμικές τέχνες, εξάσκηση', rope: 'Σχοινάκι' },
     showDetails: 'Λεπτομέρειες', hideDetails: 'Απόκρυψη',     inMeal: 'Σε αυτό το γεύμα', done: 'Τέλος', mealHint: 'Ψάξε και πρόσθεσε κάθε κομμάτι του γεύματος. Η οθόνη μένει ανοιχτή μέχρι να πατήσεις «Τέλος».', items: n => `${n} ${n === 1 ? 'τροφή' : 'τροφές'}`, addedTo: m => `Προστέθηκε: ${m}`,
-    segG: 'Γραμμάρια', segTsp: 'Κουταλάκι', segTbsp: 'Κουτάλι', tsp: 'κ.γ.', tbsp: 'κ.σ.', tspLong: 'κουταλάκι του γλυκού', tbspLong: 'κουτάλι της σούπας', measureIn: 'Μέτρηση σε', spoonIs: (u, g) => `1 ${u} = ${g} g`, spoonTypical: 'τυπική κοφτή κουταλιά', spoonMine: 'δική σου τιμή',
+    segG: 'Γραμμάρια', segPc: 'Τεμάχια', segTsp: 'Κουταλάκι', segTbsp: 'Κουτάλι', pc: () => 'τεμ.', pcLong: 'τεμάχιο', sizeS: 'Μικρό', sizeM: 'Μεσαίο', sizeL: 'Μεγάλο', sizeXL: 'XL', sizeMine: 'Δικό μου', eggNote: 'μέγεθος συσκευασίας, χωρίς τσόφλι', pieceTypical: s => `τυπικό ${s.toLowerCase()}`, pieceAsk: 'Γραμμάρια σε 1 τεμάχιο', pieceHint: 'Ζύγισε ένα μία φορά και θα το θυμάται για αυτή την τροφή.', tsp: 'κ.γ.', tbsp: 'κ.σ.', tspLong: 'κουταλάκι του γλυκού', tbspLong: 'κουτάλι της σούπας', measureIn: 'Μέτρηση σε', spoonIs: (u, g) => `1 ${u} = ${g} g`, spoonTypical: 'τυπική κοφτή κουταλιά', spoonMine: 'δική σου τιμή',
     spoonAsk: u => `Γραμμάρια σε 1 κοφτό ${u}`, spoonHint: 'Ζύγισε μία κουταλιά μία φορά και θα τη θυμάται για αυτή την τροφή. Μια γεμάτη κουταλιά μπορεί να ζυγίζει έως και περίπου τα διπλά.', gApprox: g => `≈ ${g} g`,
     offline: 'Αποθηκευμένο σε αυτό το κινητό', delConfirm: 'Διαγραφή αυτής της τροφής;', yes: 'Ναι', no: 'Όχι', cancel: 'Άκυρο', toastAdded: 'Προστέθηκε', toastRemoved: 'Αφαιρέθηκε', installHint: 'Για εγκατάσταση: μενού browser → «Προσθήκη στην αρχική οθόνη».'
   }
@@ -144,7 +158,7 @@ let ob = null; // onboarding draft
 let ui = { moreOpen: false, query: '', plan: { mode: 'set', unit: 'kcal', amount: 100, food: { src: 'c', id: 9100 } } };
 
 function blank() {
-  return { v: 1, lang: (navigator.language || 'en').toLowerCase().startsWith('el') ? 'el' : 'en', profile: null, log: {}, myFoods: [], weights: [], recent: [], calib: null, sumOpen: false, spoon: {} };
+  return { v: 1, lang: (navigator.language || 'en').toLowerCase().startsWith('el') ? 'el' : 'en', profile: null, log: {}, myFoods: [], weights: [], recent: [], calib: null, sumOpen: false, spoon: {}, piece: {} };
 }
 function load() {
   try { const s = JSON.parse(localStorage.getItem(STORE_KEY)); if (s && s.v === 1) return Object.assign(blank(), s); } catch (e) { }
@@ -201,7 +215,24 @@ function spoonDefault(src, id) {
   return null;
 }
 function spoonFor(src, id) { const u = S.spoon[foodKey(src, id)]; if (u) return { g: u, mine: true }; const d = spoonDefault(src, id); return d ? { g: d, mine: false } : null; }
-function amountLabel(e) { return e.unit && e.unit !== 'g' ? `${fmt(e.qty, 2)} ${t(e.unit)} · ${fmt(e.grams)} g` : `${fmt(e.grams)} g`; }
+function pieceDefault(src, id) {
+  if (src !== 'c') return null;
+  const f = FOOD.get(Number(id)); if (!f) return null;
+  for (const [re, sizes, kind, grp] of PIECE) { if (grp && f.g !== grp) continue; if (re.test(f.en)) return { sizes, egg: kind === 'egg' }; }
+  return null;
+}
+// What one piece weighs for a food: the user's own value, else their last size, else medium.
+function pieceFor(src, id) {
+  const u = S.piece[foodKey(src, id)], pd = pieceDefault(src, id);
+  if (typeof u === 'number') return { size: 'mine', g: u };
+  if (pd) { const sz = u && pd.sizes[u] ? u : (pd.sizes.M ? 'M' : Object.keys(pd.sizes)[0]); return { size: sz, g: pd.sizes[sz] }; }
+  return { size: 'mine', g: '' };
+}
+const sizeName = (sz, egg) => sz === 'mine' ? t('sizeMine') : egg ? sz : t('size' + sz);
+function amountLabel(e) {
+  if (e.unit === 'pc') { const pd = pieceDefault(e.src, e.ref); const sz = pd && e.size && e.size !== 'mine' && Object.keys(pd.sizes).length > 1 ? ` (${sizeName(e.size, pd.egg)})` : ''; return `${fmt(e.qty, 2)} ${t('pc')(e.qty)}${sz} · ${fmt(e.grams)} g`; }
+  return e.unit && e.unit !== 'g' ? `${fmt(e.qty, 2)} ${t(e.unit)} · ${fmt(e.grams)} g` : `${fmt(e.grams)} g`;
+}
 // Words that turn a basic food into a product or a part of it. A name with one of these ranks lower unless the search asks for it.
 const DERIVED = ['nectar', 'juice', 'drink', 'tart', 'turnover', 'pie', 'cake', 'compote', 'jam', 'starch', 'flour', 'bran', 'fat', 'oil', 'sauce', 'powder', 'syrup', 'soup', 'salad', 'puree', 'crisps', 'chips', 'dessert', 'pudding', 'biscuit', 'spread', 'sweets', 'snack', 'type',
   'νεκταρ', 'χυμοσ', 'ροφημα', 'ταρτα', 'πιτα', 'κεικ', 'κομποστα', 'μαρμελαδα', 'αμυλο', 'αλευρι', 'πιτουρο', 'λιποσ', 'λαδι', 'ελαιο', 'σαλτσα', 'σκονη', 'σιροπι', 'σουπα', 'σαλατα', 'πουρεσ', 'πατατακια', 'γλυκο', 'μπισκοτο', 'επαλειμμα', 'τυπου'];
@@ -542,6 +573,7 @@ let fd = null; // draft
 const qtyLabel = v => v === 0.5 ? '½' : fmt(v, 2);
 function fdGrams() { // grams the draft stands for, whichever unit is in use
   if (fd.unit === 'g') return Math.max(0, num(fd.grams) || 0);
+  if (fd.unit === 'pc') return Math.max(0, (num(fd.qty) || 0) * (num(fd.gpp) || 0));
   const gpt = num(fd.gpt); if (!gpt || gpt <= 0) return 0;
   return Math.max(0, (num(fd.qty) || 0) * gpt / SPOON_DIV[fd.unit]);
 }
@@ -551,14 +583,17 @@ function vFood(q) {
     if (q.edit != null) {
       const e = (S.log[ds] || { entries: [] }).entries[Number(q.edit)];
       if (!e) { go('/?d=' + ds); return ''; }
-      const sp = spoonFor(e.src, e.ref);
+      const sp = spoonFor(e.src, e.ref), pc = pieceFor(e.src, e.ref);
       fd = { key: location.hash, src: e.src, id: e.ref, grams: e.grams, meal: e.meal, approx: !!e.approx, edit: Number(q.edit), from: q.from || '',
-        unit: e.unit || 'g', qty: e.qty != null ? e.qty : 1, gpt: e.gpt || (sp ? sp.g : ''), gptOpen: false };
+        unit: e.unit || 'g', qty: e.qty != null ? e.qty : 1, gpt: e.gpt || (sp ? sp.g : ''), gptOpen: false,
+        size: e.unit === 'pc' ? e.size : pc.size, gpp: e.unit === 'pc' ? e.gpp : pc.g };
     } else {
       const last = S.recent.find(r => r.src === q.src && String(r.id) === String(q.id));
-      const id = q.src === 'c' ? Number(q.id) : q.id, sp = spoonFor(q.src, id);
+      const id = q.src === 'c' ? Number(q.id) : q.id, sp = spoonFor(q.src, id), pc = pieceFor(q.src, id);
+      // Countable foods (eggs, fruit) open in pieces the first time; after that the last unit used comes back.
+      const unit = last && last.unit ? last.unit : pieceDefault(q.src, id) ? 'pc' : 'g';
       fd = { key: location.hash, src: q.src, id, grams: last ? last.grams : 100, meal: q.meal || defaultMeal(), approx: false, edit: null, from: 'add',
-        unit: last && last.unit ? last.unit : 'g', qty: last && last.qty != null ? last.qty : 1, gpt: sp ? sp.g : '', gptOpen: false };
+        unit, qty: last && last.qty != null ? last.qty : 1, gpt: sp ? sp.g : '', gptOpen: false, size: pc.size, gpp: pc.g };
     }
   }
   const f = getFood(fd.src, fd.id); if (!f) return `<div class="head">${backBtn('/')}</div><p>${esc(t('noResults'))}</p>`;
@@ -570,9 +605,21 @@ function vFood(q) {
     const other = getFood('c', pair.state === 'dry' ? pair.cooked : pair.dry);
     if (other && other.n[0]) equiv = pair.state === 'dry' ? t('onceCooked')(fmt(g * f.n[0] / other.n[0])) : t('beforeCooking')(fmt(g * f.n[0] / other.n[0]));
   }
-  const spoon = fd.unit !== 'g', div = SPOON_DIV[fd.unit] || 1, gpt = num(fd.gpt);
+  const spoon = fd.unit === 'tsp' || fd.unit === 'tbsp', div = SPOON_DIV[fd.unit] || 1, gpt = num(fd.gpt);
   const stepBtn = (a, v, lbl, ic) => `<button class="iconbtn" data-a="${a}" data-v="${v}" aria-label="${lbl}" style="border:1px solid var(--chip);border-radius:26px;width:52px;height:52px">${ic}</button>`;
-  const amount = spoon
+  const pd = pieceDefault(fd.src, fd.id), gpp = num(fd.gpp);
+  const sizeChips = pd && (Object.keys(pd.sizes).length > 1 || fd.size === 'mine') ? `<div class="chips" role="group">${[...SIZES.filter(z => pd.sizes[z]), ...(typeof S.piece[foodKey(fd.src, fd.id)] === 'number' || fd.size === 'mine' ? ['mine'] : [])].map(z => `<button class="chip" data-a="sizeSet" data-v="${z}" aria-pressed="${fd.size === z}">${esc(sizeName(z, pd.egg))}${z !== 'mine' ? ` <span class="mono xs">${fmt(pd.sizes[z])} g</span>` : ''}</button>`).join('')}</div>` : '';
+  const amount = fd.unit === 'pc'
+    ? `<div class="row between">${stepBtn('qStep', -1, '−1', icon.minus)}
+        <label class="row" style="justify-content:center;gap:6px;align-items:baseline"><span class="sr">${esc(t('segPc'))}</span><input id="qty" class="huge" inputmode="decimal" data-in="qty" value="${esc(fd.qty)}" style="width:110px;border:0;background:transparent;text-align:right;padding:0;outline:0"><span id="pcu" style="font-size:20px;color:var(--ink2);font-weight:500">${esc(t('pc')(fd.qty))}</span></label>
+        ${stepBtn('qStep', 1, '+1', icon.plus)}</div>
+      <div class="grid4">${[1, 2, 3, 4].map(p => `<button class="chip" data-a="qSet" data-v="${p}" aria-pressed="${num(fd.qty) === p}" style="border-radius:10px;height:40px"><span class="mono">${p}</span> ${esc(t('pc')(p))}</button>`).join('')}</div>
+      ${sizeChips}
+      <span class="small muted" style="text-align:center" id="gEq">${gpp ? esc(t('gApprox')(fmt(g, 1))) : ''}</span>
+      ${!gpp || fd.gptOpen
+        ? `<label class="field"><span class="lbl">${esc(t('pieceAsk'))}</span><input id="gpp" class="input mono" inputmode="decimal" data-in="gpp" value="${gpp ? esc(gpp) : ''}" placeholder="g"><span class="xs muted">${esc(t('pieceHint'))}</span></label>`
+        : `<div class="row between" style="border-top:1px solid var(--line2);padding-top:10px"><span class="small"><span class="mono">1 ${esc(t('pc')(1))} = ${fmt(gpp, 1)} g</span> <span class="muted">· ${esc(fd.size === 'mine' || !pd ? t('spoonMine') : pd.egg ? `${fd.size}, ${t('eggNote')}` : t('pieceTypical')(t('size' + fd.size)))}</span></span><button class="btn ghost" data-a="gptEdit" style="width:auto;height:36px;padding:0 4px;font-size:14px">${esc(t('change'))}</button></div>`}`
+    : spoon
     ? `<div class="row between">${stepBtn('qStep', -0.5, '−½', icon.minus)}
         <label class="row" style="justify-content:center;gap:6px;align-items:baseline"><span class="sr">${esc(t(fd.unit + 'Long'))}</span><input id="qty" class="huge" inputmode="decimal" data-in="qty" value="${esc(fd.qty)}" style="width:110px;border:0;background:transparent;text-align:right;padding:0;outline:0"><span style="font-size:20px;color:var(--ink2);font-weight:500">${esc(t(fd.unit))}</span></label>
         ${stepBtn('qStep', 0.5, '+½', icon.plus)}</div>
@@ -589,7 +636,7 @@ function vFood(q) {
   const back = fd.edit != null && fd.from !== 'add' ? '/?d=' + ds : `/add?meal=${fd.meal}&d=${ds}`;
   return `<div class="head">${backBtn(back)}<div class="col" style="gap:2px"><h1 style="font-size:20px;line-height:1.25">${esc(f.name)}</h1><span class="xs muted">${esc(t('per100src'))} · ${esc(f.tag)}${fd.src === 'c' ? ' 2025 · #' + f.id : ''}</span></div></div>
     ${pair ? `<div class="field"><span class="lbl">${esc(t('iWeighed'))}</span><div class="seg"><button data-a="pairSwitch" data-v="dry" aria-pressed="${pair.state === 'dry'}">${esc(t('dry'))}</button><button data-a="pairSwitch" data-v="cooked" aria-pressed="${pair.state === 'cooked'}">${esc(t('cooked'))}</button></div></div>` : ''}
-    <div class="seg" role="group" aria-label="${esc(t('measureIn'))}">${['g', 'tsp', 'tbsp'].map(u => `<button data-a="unitSet" data-v="${u}" aria-pressed="${fd.unit === u}">${esc(t({ g: 'segG', tsp: 'segTsp', tbsp: 'segTbsp' }[u]))}</button>`).join('')}</div>
+    <div class="seg" role="group" aria-label="${esc(t('measureIn'))}">${['g', 'pc', 'tsp', 'tbsp'].map(u => `<button data-a="unitSet" data-v="${u}" aria-pressed="${fd.unit === u}">${esc(t({ g: 'segG', pc: 'segPc', tsp: 'segTsp', tbsp: 'segTbsp' }[u]))}</button>`).join('')}</div>
     <div class="card col" style="gap:14px;padding:16px">
       ${amount}
       ${equiv ? `<span class="small muted" style="text-align:center" id="equiv">${esc(equiv)}</span>` : ''}
@@ -608,9 +655,11 @@ function updateFoodLive() {
   const ms = document.querySelectorAll('#macros .mono'); [1, 2, 3, 5].forEach((i, j) => { if (ms[j]) ms[j].textContent = (nn[i] == null ? '–' : fmt(nn[i], 1)) + ' g'; });
   const pair = fd.src === 'c' ? PAIR.get(f.id) : null; const eq = document.getElementById('equiv');
   if (pair && eq) { const o = getFood('c', pair.state === 'dry' ? pair.cooked : pair.dry); eq.textContent = pair.state === 'dry' ? t('onceCooked')(fmt(g * f.n[0] / o.n[0])) : t('beforeCooking')(fmt(g * f.n[0] / o.n[0])); }
-  const ge = document.getElementById('gEq'); if (ge) ge.textContent = num(fd.gpt) ? t('gApprox')(fmt(g, 1)) : '';
+  const ge = document.getElementById('gEq'); if (ge) ge.textContent = (fd.unit === 'pc' ? num(fd.gpp) : num(fd.gpt)) ? t('gApprox')(fmt(g, 1)) : '';
   document.querySelectorAll('[data-a="gSet"]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === g)));
   document.querySelectorAll('[data-a="qSet"]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === num(fd.qty))));
+  const pu = document.getElementById('pcu'); if (pu) pu.textContent = t('pc')(fd.qty);
+  document.querySelectorAll('[data-a="sizeSet"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === fd.size)));
   const sb = document.querySelector('[data-a="logSave"]'); if (sb) sb.disabled = !(g > 0);
 }
 
@@ -816,22 +865,24 @@ document.addEventListener('click', e => {
     case 'toggleMore': ui.moreOpen = !ui.moreOpen; render(); break;
     case 'toggleSum': S.sumOpen = !S.sumOpen; save(); render(); break;
     case 'toggleType': { const ds = el.dataset.d; const L = S.log[ds] || (S.log[ds] = { entries: [], complete: false }); const cur = dayInfo(ds).workout; L.type = cur ? 'rest' : 'workout'; save(); render(); break; }
-    case 'pairSwitch': { const p = PAIR.get(fd.id); if (p && p.state !== v) { const f = getFood('c', fd.id); const o = getFood('c', v === 'dry' ? p.dry : p.cooked); fd.grams = Math.round(fdGrams() * f.n[0] / o.n[0]); fd.unit = 'g'; fd.id = o.id; const sp = spoonFor('c', o.id); fd.gpt = sp ? sp.g : ''; fd.gptOpen = false; render(); } break; }
-    case 'unitSet': if (fd.unit !== v) { if (v === 'g') fd.grams = Math.round(fdGrams()) || fd.grams; else if (fd.unit === 'g') fd.qty = 1; fd.unit = v; fd.gptOpen = false; render(); } break;
+    case 'pairSwitch': { const p = PAIR.get(fd.id); if (p && p.state !== v) { const f = getFood('c', fd.id); const o = getFood('c', v === 'dry' ? p.dry : p.cooked); fd.grams = Math.round(fdGrams() * f.n[0] / o.n[0]); fd.unit = 'g'; fd.id = o.id; const sp = spoonFor('c', o.id); fd.gpt = sp ? sp.g : ''; const pc = pieceFor('c', o.id); fd.size = pc.size; fd.gpp = pc.g; fd.gptOpen = false; render(); } break; }
+    case 'unitSet': if (fd.unit !== v) { const fam = u => u === 'tsp' || u === 'tbsp' ? 'spoon' : u; if (v === 'g') fd.grams = Math.round(fdGrams()) || fd.grams; else if (fam(v) !== fam(fd.unit)) fd.qty = 1; fd.unit = v; fd.gptOpen = false; render(); } break;
+    case 'sizeSet': { const pd = pieceDefault(fd.src, fd.id); fd.size = v; fd.gpp = v === 'mine' ? (S.piece[foodKey(fd.src, fd.id)] || fd.gpp) : pd.sizes[v]; fd.gptOpen = false; render(); break; }
     case 'qStep': fd.qty = Math.max(0, (num(fd.qty) || 0) + Number(v)); document.getElementById('qty').value = fd.qty; updateFoodLive(); break;
     case 'qSet': fd.qty = Number(v); document.getElementById('qty').value = fd.qty; updateFoodLive(); break;
-    case 'gptEdit': fd.gptOpen = true; render(); { const gi = document.getElementById('gpt'); if (gi) { gi.focus(); gi.select(); } } break;
+    case 'gptEdit': fd.gptOpen = true; render(); { const gi = document.getElementById('gpt') || document.getElementById('gpp'); if (gi) { gi.focus(); gi.select(); } } break;
     case 'gStep': fd.grams = Math.max(0, (Number(String(fd.grams).replace(',', '.')) || 0) + Number(v)); document.getElementById('grams').value = fd.grams; updateFoodLive(); break;
     case 'gSet': fd.grams = Number(v); document.getElementById('grams').value = fd.grams; updateFoodLive(); break;
     case 'mealSet': fd.meal = v; render(); break;
     case 'logSave': {
       const ds = el.dataset.d; const f = getFood(fd.src, fd.id); const L = S.log[ds] || (S.log[ds] = { entries: [], complete: false });
       const pair = fd.src === 'c' ? PAIR.get(f.id) : null;
-      const spoon = fd.unit !== 'g', gpt = num(fd.gpt);
+      const spoon = fd.unit === 'tsp' || fd.unit === 'tbsp', gpt = num(fd.gpt);
       const entry = { src: fd.src, ref: f.id, name: f.name, tag: f.tag, n: f.n, grams: Math.round(fdGrams() * 10) / 10, meal: fd.meal, approx: fd.approx, state: pair ? pair.state : null, at: fd.edit != null && L.entries[fd.edit] ? L.entries[fd.edit].at : Date.now() };
-      if (spoon) { entry.unit = fd.unit; entry.qty = num(fd.qty); entry.gpt = gpt; const key = foodKey(fd.src, f.id); if (gpt === spoonDefault(fd.src, f.id)) delete S.spoon[key]; else S.spoon[key] = gpt; }
+      if (fd.unit === 'pc') { entry.unit = 'pc'; entry.qty = num(fd.qty); entry.gpp = num(fd.gpp); entry.size = fd.size; S.piece[foodKey(fd.src, f.id)] = fd.size === 'mine' ? entry.gpp : fd.size; }
+      else if (spoon) { entry.unit = fd.unit; entry.qty = num(fd.qty); entry.gpt = gpt; const key = foodKey(fd.src, f.id); if (gpt === spoonDefault(fd.src, f.id)) delete S.spoon[key]; else S.spoon[key] = gpt; }
       if (fd.edit != null) L.entries[fd.edit] = entry; else L.entries.push(entry);
-      S.recent = [{ src: fd.src, id: f.id, grams: spoon ? (S.recent.find(r => r.src === fd.src && String(r.id) === String(f.id)) || { grams: 100 }).grams : entry.grams, unit: fd.unit, qty: spoon ? entry.qty : null }, ...S.recent.filter(r => !(r.src === fd.src && String(r.id) === String(f.id)))].slice(0, 30);
+      S.recent = [{ src: fd.src, id: f.id, grams: fd.unit !== 'g' ? (S.recent.find(r => r.src === fd.src && String(r.id) === String(f.id)) || { grams: 100 }).grams : entry.grams, unit: fd.unit, qty: fd.unit !== 'g' ? entry.qty : null }, ...S.recent.filter(r => !(r.src === fd.src && String(r.id) === String(f.id)))].slice(0, 30);
       save();
       if (fd.edit != null && fd.from !== 'add') { toast(t('saved')); go('/?d=' + ds); } else { toast(fd.edit != null ? t('saved') : t('addedTo')(t(fd.meal).toLowerCase())); go(`/add?meal=${fd.meal}&d=${ds}`); }
       break;
@@ -898,6 +949,7 @@ document.addEventListener('input', e => {
   }
   if (k === 'grams') { fd.grams = el.value; updateFoodLive(); }
   if (k === 'qty') { fd.qty = el.value; updateFoodLive(); }
+  if (k === 'gpp') { const x = num(el.value); fd.gpp = x && x > 0 ? x : ''; fd.size = 'mine'; updateFoodLive(); }
   if (k === 'gpt') { const x = num(el.value); fd.gpt = x && x > 0 ? Math.round(x * SPOON_DIV[fd.unit] * 100) / 100 : ''; updateFoodLive(); }
   if (k === 'mf') { const kk = el.dataset.k; if (kk.startsWith('n')) mf.n[Number(kk.slice(1))] = el.value; else mf[kk] = el.value; const sb = document.querySelector('[data-a="mfSave"]'); if (sb) sb.disabled = !(mf.name.trim() && num(mf.n[0]) != null); }
   if (k === 'bc') scanState.code = el.value;
