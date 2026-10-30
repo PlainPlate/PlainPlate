@@ -18,6 +18,20 @@ const ACT = Object.fromEntries(ACTS.map(([k, c, m]) => [k, { code: c, met: m }])
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
 const N = { kcal: 0, p: 1, c: 2, f: 3, s: 4, fi: 5, sf: 6, salt: 7 };
 const KCAL_PER_KG = 7700; // rough rule of thumb, shown as "about"
+// Grams in one level tablespoon (~15 ml); a teaspoon is a third. Typical household values (USDA household measures, pack servings).
+// First match on the Ciqual English name wins; a third item limits the rule to one Ciqual group. Anything else asks the user once.
+const SPOON = [
+  [/^chia/i, 12], [/^flaxseed/i, 10], [/^sesame seed/i, 9], [/^sunflower seed/i, 9], [/^pumpkin and squash, seed/i, 8], [/^hemp, seed/i, 10],
+  [/^(peanut butter|tahini)/i, 16], [/^honey$/i, 21], [/^maple syrup/i, 20], [/^(jam|marmalade)/i, 20],
+  [/^sugar, (white|vanilla)/i, 12.5], [/^sugar, brown/i, 13.8],
+  [/^butter oil/i, 13, 'o'], [/^butter/i, 14.2, 'o'], [/^spreadable fat/i, 14, 'o'], [/^(lard|chicken fat|duck fat|goose fat|turkey fat)/i, 13, 'o'], [/\boil\b/i, 13.6, 'o'],
+  [/^oat (flakes|, raw)$/i, 5], [/^oat bran/i, 6], [/^wheat flour/i, 7.8], [/^cocoa powder, no added/i, 5.4], [/^cocoa or chocolate powder/i, 7],
+  [/^milk,/i, 15.3], [/^cream\b/i, 15], [/^yogurt, greek-style, plain/i, 17], [/^yogurt\b.*plain/i, 15.3],
+  [/^mayonnaise/i, 13.8], [/^ketchup/i, 17], [/^mustard/i, 15], [/^soy sauce/i, 16], [/^vinegar/i, 15], [/^lemon juice/i, 15],
+  [/^rice, [a-z ,()]*raw$/i, 12], [/^parmesan/i, 5], [/^raisin$/i, 10], [/^coconut, pulp, dried/i, 5],
+  [/^cinnamon, powder/i, 7.8], [/^paprika, powder/i, 6.9], [/^oregano, dried/i, 3], [/^salt, /i, 18], [/^coffee, ground/i, 5]
+];
+const SPOON_DIV = { tbsp: 1, tsp: 3 };
 
 /* ---------- Text (Greek / English) ---------- */
 const T = {
@@ -66,6 +80,9 @@ const T = {
       'Fonts: Commissioner and JetBrains Mono (SIL Open Font License).'],
     days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     acts: { strength: 'Strength training, moderate', strength_hard: 'Strength training, vigorous', bodyweight: 'Bodyweight or resistance bands', walk: 'Walking, moderate pace', walk_brisk: 'Walking, brisk', hike: 'Hiking', run: 'Running (~10 min/mile)', cycle_easy: 'Cycling, easy', cycle: 'Cycling, general', cycle_indoor: 'Indoor cycling, moderate', swim: 'Swimming laps, easy', yoga: 'Yoga', pilates: 'Pilates', dance: 'Dancing', zumba: 'Zumba', circuit: 'Circuit training', elliptical: 'Elliptical trainer', rowing: 'Rowing machine', tennis: 'Tennis', football: 'Football (casual)', basketball: 'Basketball', martial: 'Martial arts, practice', rope: 'Jump rope' },
+    showDetails: 'Show details', hideDetails: 'Hide details',     inMeal: 'In this meal', done: 'Done', mealHint: 'Search and add each part of the meal. This screen stays open until you tap Done.', items: n => `${n} ${n === 1 ? 'item' : 'items'}`, addedTo: m => `Added to ${m}`,
+    segG: 'Grams', segTsp: 'Teaspoon', segTbsp: 'Tablespoon', tsp: 'tsp', tbsp: 'tbsp', tspLong: 'teaspoon', tbspLong: 'tablespoon', measureIn: 'Measure in', spoonIs: (u, g) => `1 ${u} = ${g} g`, spoonTypical: 'typical level spoon', spoonMine: 'your own value',
+    spoonAsk: u => `Grams in 1 level ${u}`, spoonHint: 'Weigh one spoonful once and it is remembered for this food. A heaped spoon can weigh up to about twice as much.', gApprox: g => `≈ ${g} g`,
     offline: 'Saved on this phone', delConfirm: 'Delete this food?', yes: 'Yes', no: 'No', cancel: 'Cancel', toastAdded: 'Added', toastRemoved: 'Removed', installHint: 'To install: browser menu → "Add to Home screen".'
   },
   el: {
@@ -113,6 +130,9 @@ const T = {
       'Γραμματοσειρές: Commissioner και JetBrains Mono (SIL Open Font License).'],
     days: ['Κυρ', 'Δευ', 'Τρί', 'Τετ', 'Πέμ', 'Παρ', 'Σάβ'], months: ['Ιαν', 'Φεβ', 'Μαρ', 'Απρ', 'Μαΐ', 'Ιουν', 'Ιουλ', 'Αυγ', 'Σεπ', 'Οκτ', 'Νοε', 'Δεκ'],
     acts: { strength: 'Βάρη, μέτρια ένταση', strength_hard: 'Βάρη, υψηλή ένταση', bodyweight: 'Βάρος σώματος ή λάστιχα', walk: 'Περπάτημα, μέτριο', walk_brisk: 'Περπάτημα, γρήγορο', hike: 'Πεζοπορία', run: 'Τρέξιμο (~6 λεπτά/χλμ)', cycle_easy: 'Ποδήλατο, χαλαρά', cycle: 'Ποδήλατο, γενικά', cycle_indoor: 'Στατικό ποδήλατο, μέτριο', swim: 'Κολύμπι, χαλαρές διαδρομές', yoga: 'Γιόγκα', pilates: 'Πιλάτες', dance: 'Χορός', zumba: 'Ζούμπα', circuit: 'Κυκλική προπόνηση', elliptical: 'Ελλειπτικό', rowing: 'Κωπηλατική μηχανή', tennis: 'Τένις', football: 'Ποδόσφαιρο (χαλαρό)', basketball: 'Μπάσκετ', martial: 'Πολεμικές τέχνες, εξάσκηση', rope: 'Σχοινάκι' },
+    showDetails: 'Λεπτομέρειες', hideDetails: 'Απόκρυψη',     inMeal: 'Σε αυτό το γεύμα', done: 'Τέλος', mealHint: 'Ψάξε και πρόσθεσε κάθε κομμάτι του γεύματος. Η οθόνη μένει ανοιχτή μέχρι να πατήσεις «Τέλος».', items: n => `${n} ${n === 1 ? 'τροφή' : 'τροφές'}`, addedTo: m => `Προστέθηκε: ${m}`,
+    segG: 'Γραμμάρια', segTsp: 'Κουταλάκι', segTbsp: 'Κουτάλι', tsp: 'κ.γ.', tbsp: 'κ.σ.', tspLong: 'κουταλάκι του γλυκού', tbspLong: 'κουτάλι της σούπας', measureIn: 'Μέτρηση σε', spoonIs: (u, g) => `1 ${u} = ${g} g`, spoonTypical: 'τυπική κοφτή κουταλιά', spoonMine: 'δική σου τιμή',
+    spoonAsk: u => `Γραμμάρια σε 1 κοφτό ${u}`, spoonHint: 'Ζύγισε μία κουταλιά μία φορά και θα τη θυμάται για αυτή την τροφή. Μια γεμάτη κουταλιά μπορεί να ζυγίζει έως και περίπου τα διπλά.', gApprox: g => `≈ ${g} g`,
     offline: 'Αποθηκευμένο σε αυτό το κινητό', delConfirm: 'Διαγραφή αυτής της τροφής;', yes: 'Ναι', no: 'Όχι', cancel: 'Άκυρο', toastAdded: 'Προστέθηκε', toastRemoved: 'Αφαιρέθηκε', installHint: 'Για εγκατάσταση: μενού browser → «Προσθήκη στην αρχική οθόνη».'
   }
 };
@@ -124,7 +144,7 @@ let ob = null; // onboarding draft
 let ui = { moreOpen: false, query: '', plan: { mode: 'set', unit: 'kcal', amount: 100, food: { src: 'c', id: 9100 } } };
 
 function blank() {
-  return { v: 1, lang: (navigator.language || 'en').toLowerCase().startsWith('el') ? 'el' : 'en', profile: null, log: {}, myFoods: [], weights: [], recent: [], calib: null };
+  return { v: 1, lang: (navigator.language || 'en').toLowerCase().startsWith('el') ? 'el' : 'en', profile: null, log: {}, myFoods: [], weights: [], recent: [], calib: null, sumOpen: false, spoon: {} };
 }
 function load() {
   try { const s = JSON.parse(localStorage.getItem(STORE_KEY)); if (s && s.v === 1) return Object.assign(blank(), s); } catch (e) { }
@@ -152,6 +172,8 @@ const icon = {
   minus: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>',
   search: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B605C" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
   barcode: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7V5h3M17 5h3v2M20 17v2h-3M7 19H4v-2"/><path d="M8 9v6M11 9v6M14 9v6M16.5 9v6"/></svg>',
+  down: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
+  up: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>',
   info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>',
   today: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/></svg>',
   plan: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 18h16"/><path d="M7 18V9"/><path d="M12 18V5"/><path d="M17 18v-6"/></svg>',
@@ -171,17 +193,55 @@ function getFood(src, id) {
   if (src === 'm' || src === 'o') { const f = S.myFoods.find(x => x.id === id); return f && { src: 'm', id: f.id, name: f.name, n: f.n, tag: f.off ? 'Open Food Facts' : t('myFoods') }; }
   return null;
 }
+const foodKey = (src, id) => `${src === 'o' ? 'm' : src}:${id}`;
+function spoonDefault(src, id) {
+  if (src !== 'c') return null;
+  const f = FOOD.get(Number(id)); if (!f) return null;
+  for (const [re, g, grp] of SPOON) { if (grp && f.g !== grp) continue; if (re.test(f.en)) return g; }
+  return null;
+}
+function spoonFor(src, id) { const u = S.spoon[foodKey(src, id)]; if (u) return { g: u, mine: true }; const d = spoonDefault(src, id); return d ? { g: d, mine: false } : null; }
+function amountLabel(e) { return e.unit && e.unit !== 'g' ? `${fmt(e.qty, 2)} ${t(e.unit)} · ${fmt(e.grams)} g` : `${fmt(e.grams)} g`; }
+// Words that turn a basic food into a product or a part of it. A name with one of these ranks lower unless the search asks for it.
+const DERIVED = ['nectar', 'juice', 'drink', 'tart', 'turnover', 'pie', 'cake', 'compote', 'jam', 'starch', 'flour', 'bran', 'fat', 'oil', 'sauce', 'powder', 'syrup', 'soup', 'salad', 'puree', 'crisps', 'chips', 'dessert', 'pudding', 'biscuit', 'spread', 'sweets', 'snack', 'type',
+  'νεκταρ', 'χυμοσ', 'ροφημα', 'ταρτα', 'πιτα', 'κεικ', 'κομποστα', 'μαρμελαδα', 'αμυλο', 'αλευρι', 'πιτουρο', 'λιποσ', 'λαδι', 'ελαιο', 'σαλτσα', 'σκονη', 'σιροπι', 'σουπα', 'σαλατα', 'πουρεσ', 'πατατακια', 'γλυκο', 'μπισκοτο', 'επαλειμμα', 'τυπου'];
+const reEsc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const wordAt = (txt, tok) => new RegExp('(^|[^a-z0-9α-ω])' + reEsc(tok)).test(txt);
+// Plural/inflection stems: English only when the word ends in -s/-es (oats → oat, tomatoes → tomato); Greek endings vary, so try 1–2 letters off.
+function stems(tok) {
+  const out = [];
+  if (/[α-ω]$/.test(tok)) { if (tok.length >= 4) out.push(tok.slice(0, -1)); if (tok.length >= 6) out.push(tok.slice(0, -2)); }
+  else if (/es$/.test(tok) && tok.length >= 5) out.push(tok.slice(0, -2), tok.slice(0, -1));
+  else if (/s$/.test(tok) && tok.length >= 4) out.push(tok.slice(0, -1));
+  return out;
+}
+function tokMatch(k, tok) { // 0 = start of a word, 1 = middle of a word, 2 = plural/inflection stripped, -1 = no match
+  if (wordAt(k, tok)) return 0;
+  if (k.includes(tok)) return 1;
+  return stems(tok).some(x => wordAt(k, x)) ? 2 : -1;
+}
 function searchFoods(q, limit = 40) {
   const toks = norm(q).split(/\s+/).filter(Boolean);
   if (!toks.length) return [];
+  const phrase = toks.join(' '), t0 = toks[0], st0 = stems(t0);
   const out = [];
   for (const f of DB.foods) {
-    if (!toks.every(x => f.k.includes(x))) continue;
+    const kinds = toks.map(x => tokMatch(f.k, x));
+    if (kinds.includes(-1)) continue;
     const name = norm((S.lang === 'el' && f.el) || f.en);
-    let score = name.length;
-    if (name.startsWith(toks[0])) score -= 60;
-    if (/prepacked|canned|frozen|from fast food/i.test(f.en)) score += 40;
+    const words = name.split(/[^a-z0-9α-ω]+/).filter(Boolean), head = words[0] || '';
+    // Ciqual names a basic food as one word then details: "Banana, raw". Products read "Banana nectar".
+    const basic = /^[a-z'-]+(,|$| \()/i.test(f.en);
+    const headHit = head.startsWith(t0) || st0.some(x => head.startsWith(x) && head.length <= t0.length + 1);
+    let score = name.length * 0.6;
+    if (toks.length > 1 && name.startsWith(phrase)) score -= 90; // "olive oil" → "Olive oil, extra virgin"
+    else if (headHit) score -= basic ? 80 : 50;
+    if (head === t0 || st0.includes(head)) score -= 15; // whole word typed: "egg" before "eggplant"
+    kinds.forEach(k => { if (k === 1) score += 60; if (k === 2) score += 15; });
+    for (const w of DERIVED) if (words.some(x => x === w || x.startsWith(w) && w.length >= 5) && !toks.some(x => w.startsWith(x) || x.startsWith(w))) score += 45;
+    if (/prepacked|canned|frozen|from fast food|takeaway/i.test(f.en)) score += 40;
     if (/\(average\)/i.test(f.en)) score -= 25;
+    if (/\braw\b/i.test(f.en)) score -= 15;
     if (S.lang === 'el' && !f.el) score += 80;
     out.push([score, f]);
   }
@@ -406,51 +466,70 @@ function vToday(q) {
     macro(t('satfat'), `${fmt(tot[6])} g · ${fmt(kcalE ? tot[6] * 9 / kcalE * 100 : 0)}%`, scale(kcalE ? tot[6] * 9 / kcalE * 100 : 0, 25, null, 10), t('refSat')),
     macro(t('salt'), `${fmt(tot[7], 1)} g`, scale(tot[7], 10, null, 5), t('refSalt'))
   ] : [];
-  const meals = MEALS.map(m => {
-    const items = L.entries.map((e, i) => [e, i]).filter(([e]) => e.meal === m);
-    const sum = items.reduce((a, [e]) => a + (entryNut(e)[0] || 0), 0);
-    return `<section class="col" style="gap:6px"><div class="row between" style="padding:0 4px"><h2>${esc(t(m))}</h2><span class="mono small muted">${items.length ? fmt(sum) : '—'}</span></div>
-      <div class="card tight list">${items.map(([e, i]) => `<a class="item" href="#/food?d=${ds}&edit=${i}"><div class="grow"><div class="name">${esc((getFood(e.src, e.ref) || e).name)}</div><div class="tags"><span class="mono xs muted">${fmt(e.grams)} g${e.state ? ' · ' + esc(t(e.state === 'dry' ? 'dry' : 'cooked')).split(',')[0].toLowerCase() : ''}</span><span class="tag">${esc(e.tag)}</span>${e.approx ? `<span class="tag approx">${esc(t('approx'))}</span>` : ''}</div></div><span class="mono">${fmt(entryNut(e)[0])}</span></a>`).join('')}
-        <a class="item" href="#/add?meal=${m}&d=${ds}" style="min-height:48px;color:var(--accent)">${icon.plus}<span>${esc(t('add'))}</span></a></div></section>`;
-  }).join('');
-  return `<div class="row between" style="min-height:44px"><div class="row" style="gap:2px"><a class="iconbtn" href="#/?d=${addDays(ds, -1)}" aria-label="−1">${icon.back}</a><h1 style="font-size:22px">${esc(isToday ? t('today') : dayLabel(ds))}</h1>${!isToday ? `<a class="iconbtn" href="#/?d=${addDays(ds, 1)}" aria-label="+1">${icon.fwd}</a>` : ''}</div>
-      <button class="chip" data-a="toggleType" data-d="${ds}" style="background:var(--accent-soft);color:var(--accent);border-color:transparent;font-weight:500">${esc(info.workout ? t('workoutDay') : t('restDay'))}</button></div>
+  const cell = (k, i) => `<div class="col" style="gap:2px;min-width:0"><span class="xs muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t(k))}</span><span class="mono" style="font-size:14px">${fmt(tot[i])} g</span></div>`;
+  const leftLine = `<span class="mono" style="font-weight:500">${fmt(Math.abs(left))}</span> ${esc(left >= 0 ? t('kcalLeft') : t('kcalOver'))}`;
+  const summary = S.sumOpen
+    ? `<div class="row" style="justify-content:flex-end;margin:-10px 0 -14px"><button class="btn ghost" data-a="toggleSum" aria-expanded="true" style="width:auto;height:40px;padding:0 4px;font-size:14px">${esc(t('hideDetails'))}${icon.up}</button></div>
     <div class="col" style="align-items:center;gap:8px">
       <div class="ring"><svg width="236" height="236" viewBox="0 0 236 236" role="img" aria-label="${fmt(eaten)} ${esc(t('of'))} ${fmt(info.target)} kcal">
         <circle cx="118" cy="118" r="114" fill="#FFFFFF" stroke="#E2E4DF"/><circle cx="118" cy="118" r="100" fill="none" stroke="#ECEEEA"/>
         <circle cx="118" cy="118" r="88" fill="none" stroke="#E6E8E3" stroke-width="12"/>
         <circle cx="118" cy="118" r="88" fill="none" stroke="#2B4C9B" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(C * frac).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 118 118)" ${frac === 0 ? 'stroke-opacity="0"' : ''}/></svg>
         <div class="center"><span class="huge" style="font-size:40px">${fmt(eaten)}</span><span class="small muted">${esc(t('of'))} ${fmt(info.target)} kcal</span></div></div>
-      <span style="font-size:15px"><span class="mono" style="font-weight:500">${fmt(Math.abs(left))}</span> ${esc(left >= 0 ? t('kcalLeft') : t('kcalOver'))}</span>
+      <span style="font-size:15px">${leftLine}</span>
     </div>
     <div class="card" style="padding:4px 16px 6px">${macros.join('')}${more.join('')}
-      <button class="btn ghost" data-a="toggleMore" style="justify-content:space-between;padding:0">${esc(ui.moreOpen ? t('less') : t('more'))}${ui.moreOpen ? '' : icon.fwd}</button></div>
+      <button class="btn ghost" data-a="toggleMore" style="justify-content:space-between;padding:0">${esc(ui.moreOpen ? t('less') : t('more'))}${ui.moreOpen ? '' : icon.fwd}</button></div>`
+    : `<button class="card sum" data-a="toggleSum" aria-expanded="false">
+      <div class="row between" style="align-items:baseline;gap:8px"><span><span class="mono" style="font-size:26px;font-weight:500;letter-spacing:-.02em">${fmt(eaten)}</span> <span class="small muted">/ ${fmt(info.target)} kcal</span></span><span class="small" style="text-align:right">${leftLine}</span></div>
+      <div class="bar" aria-hidden="true"><div style="width:${(frac * 100).toFixed(1)}%"></div></div>
+      <div class="grid3">${cell('protein', 1)}${cell('carbs', 2)}${cell('fat', 3)}</div>
+      <span class="row xs" style="color:var(--accent);gap:2px;font-weight:600;justify-content:center">${esc(t('showDetails'))}${icon.down}</span></button>`;
+  const meals = MEALS.map(m => {
+    const items = L.entries.map((e, i) => [e, i]).filter(([e]) => e.meal === m);
+    const sum = items.reduce((a, [e]) => a + (entryNut(e)[0] || 0), 0);
+    return `<section class="col" style="gap:6px"><div class="row between" style="padding:0 4px"><h2>${esc(t(m))}</h2><span class="mono small muted">${items.length ? fmt(sum) : '—'}</span></div>
+      <div class="card tight list">${items.map(([e, i]) => `<a class="item" href="#/food?d=${ds}&edit=${i}"><div class="grow"><div class="name">${esc((getFood(e.src, e.ref) || e).name)}</div><div class="tags"><span class="mono xs muted">${esc(amountLabel(e))}${e.state ? ' · ' + esc(t(e.state === 'dry' ? 'dry' : 'cooked')).split(',')[0].toLowerCase() : ''}</span><span class="tag">${esc(e.tag)}</span>${e.approx ? `<span class="tag approx">${esc(t('approx'))}</span>` : ''}</div></div><span class="mono">${fmt(entryNut(e)[0])}</span></a>`).join('')}
+        <a class="item" href="#/add?meal=${m}&d=${ds}" style="min-height:48px;color:var(--accent)">${icon.plus}<span>${esc(t('add'))}</span></a></div></section>`;
+  }).join('');
+  return `<div class="row between" style="min-height:44px"><div class="row" style="gap:2px"><a class="iconbtn" href="#/?d=${addDays(ds, -1)}" aria-label="−1">${icon.back}</a><h1 style="font-size:22px">${esc(isToday ? t('today') : dayLabel(ds))}</h1>${!isToday ? `<a class="iconbtn" href="#/?d=${addDays(ds, 1)}" aria-label="+1">${icon.fwd}</a>` : ''}</div>
+      <button class="chip" data-a="toggleType" data-d="${ds}" style="background:var(--accent-soft);color:var(--accent);border-color:transparent;font-weight:500">${esc(info.workout ? t('workoutDay') : t('restDay'))}</button></div>
+    ${summary}
     ${approx ? `<div class="note approx">${icon.info}<span>${esc(t('approxToday')(approx))}</span></div>` : ''}
     ${partial ? `<div class="note plain">${icon.info}<span>${esc(t('partialDay'))}</span></div>` : ''}
     ${meals}
     <div class="card"><label class="check"><input type="checkbox" data-a="complete" data-d="${ds}" ${L.complete ? 'checked' : ''}>${esc(t('dayComplete'))}</label><p class="xs muted">${esc(t('dayCompleteHint'))}</p></div>`;
 }
 
-/* ---------- Add (search) ---------- */
+/* ---------- Add (meal builder) ---------- */
+// The add screen is the meal builder: every food added lands back here, listed under the meal, until the user taps Done.
+function mealItems(ds, meal) { return ((S.log[ds] || { entries: [] }).entries).map((e, i) => [e, i]).filter(([e]) => e.meal === meal); }
 function vAdd(q) {
   const meal = q.meal || defaultMeal(), ds = q.d || todayStr();
   const qs = ui.query;
   const recents = S.recent.slice(0, 8).map(r => getFood(r.src, r.id)).filter(Boolean);
   const mine = S.myFoods.filter(f => !qs || norm(f.name).includes(norm(qs)));
   const res = qs ? searchFoods(qs) : [];
+  const items = mealItems(ds, meal), sum = items.reduce((a, [e]) => a + (entryNut(e)[0] || 0), 0);
   const href = f => `#/food?src=${f.src}&id=${encodeURIComponent(f.id)}&meal=${meal}&d=${ds}`;
   const rowC = f => { const p = PAIR.get(f.id); const name = (S.lang === 'el' && f.el) || f.en; return `<a class="item" href="#/food?src=c&id=${f.id}&meal=${meal}&d=${ds}"><div class="grow"><div class="name">${esc(name)}</div><div class="tags"><span class="tag">Ciqual</span>${p ? `<span class="xs" style="color:var(--accent)">${esc(t('weighDryOrCooked'))}</span>` : ''}</div></div><span class="mono xs muted" style="text-align:right">${fmt(f.n[0])}<br>${esc(t('per100'))}</span></a>`; };
   const rowG = f => `<a class="item" href="${href(f)}"><div class="grow"><div class="name">${esc(f.name)}</div><div class="tags"><span class="tag">${esc(f.tag)}</span></div></div><span class="mono xs muted" style="text-align:right">${fmt(f.n[0])}<br>${esc(t('per100'))}</span></a>`;
-  return `<div class="head">${backBtn('/?d=' + ds)}<h1 style="font-size:22px">${esc(t('addTo'))} ${esc(t(meal).toLowerCase())}</h1></div>
+  const mealList = items.length
+    ? `<div class="col" style="gap:6px"><div class="row between" style="padding:0 4px"><span class="sectionlbl" style="padding:0">${esc(t('inMeal'))}</span><span class="mono small muted">${fmt(sum)} kcal</span></div>
+      <div class="card tight list">${items.map(([e, i]) => `<a class="item" href="#/food?d=${ds}&edit=${i}&from=add"><div class="grow"><div class="name">${esc((getFood(e.src, e.ref) || e).name)}</div><div class="tags"><span class="mono xs muted">${esc(amountLabel(e))}</span>${e.approx ? `<span class="tag approx">${esc(t('approx'))}</span>` : ''}</div></div><span class="mono">${fmt(entryNut(e)[0])}</span></a>`).join('')}</div></div>`
+    : `<p class="small muted" style="padding:0 4px">${esc(t('mealHint'))}</p>`;
+  return `<div class="head">${backBtn('/?d=' + ds)}<div class="col" style="gap:0"><h1 style="font-size:22px">${esc(t(meal))}</h1>${ds !== todayStr() ? `<span class="xs muted">${esc(dayLabel(ds))}</span>` : ''}</div></div>
     <div class="row"><label class="search grow">${icon.search}<span class="sr">${esc(t('searchPh'))}</span><input type="search" id="q" placeholder="${esc(t('searchPh'))}" value="${esc(qs)}" data-in="query" autocomplete="off"></label>
       <a class="iconbtn" href="#/scan?meal=${meal}&d=${ds}" aria-label="${esc(t('scan'))}" style="border:1px solid var(--chip);background:var(--card);width:48px;height:48px">${icon.barcode}</a></div>
-    <div id="results" class="col" style="gap:16px">${addResults(qs, recents, mine, res, rowC, rowG)}</div>
+    <div id="results" class="col" style="gap:16px">${addResults(qs, recents, mine, res, rowC, rowG, mealList)}</div>
     <div class="col card" style="border-style:dashed;gap:10px"><h2>${esc(t('cantFind'))}</h2>
       <p class="small muted">${esc(t('closest'))}: ${esc(t('closestHint'))}</p>
-      <a class="btn secondary" href="#/myfood?meal=${meal}&d=${ds}">${esc(t('createMy'))} · <span class="small muted">${esc(t('createMyHint'))}</span></a></div>`;
+      <a class="btn secondary" href="#/myfood?meal=${meal}&d=${ds}">${esc(t('createMy'))} · <span class="small muted">${esc(t('createMyHint'))}</span></a></div>
+    <div class="donebar"><a class="btn" href="#/?d=${ds}">${esc(t('done'))}${items.length ? ` <span style="font-weight:500;opacity:.85">· ${esc(t('items')(items.length))} · <span class="mono">${fmt(sum)}</span> kcal</span>` : ''}</a></div>`;
 }
-function addResults(qs, recents, mine, res, rowC, rowG) {
+function addResults(qs, recents, mine, res, rowC, rowG, mealList) {
   let h = '';
+  if (!qs) h += mealList;
   if (!qs && recents.length) h += `<div class="col" style="gap:6px"><span class="sectionlbl">${esc(t('recent'))}</span><div class="card tight list">${recents.map(rowG).join('')}</div></div>`;
   if (mine.length) h += `<div class="col" style="gap:6px"><span class="sectionlbl">${esc(t('myFoods'))}</span><div class="card tight list">${mine.slice(0, 20).map(f => rowG(getFood('m', f.id))).join('')}</div></div>`;
   if (qs) h += `<div class="col" style="gap:6px"><span class="sectionlbl">${esc(t('foods'))}</span>${res.length ? `<div class="card tight list">${res.map(rowC).join('')}</div>` : `<p class="small muted" style="padding:0 4px">${esc(t('noResults'))}</p>`}</div>`;
@@ -460,37 +539,59 @@ function defaultMeal() { const h = new Date().getHours(); return h < 11 ? 'break
 
 /* ---------- Food (log / edit) ---------- */
 let fd = null; // draft
+const qtyLabel = v => v === 0.5 ? '½' : fmt(v, 2);
+function fdGrams() { // grams the draft stands for, whichever unit is in use
+  if (fd.unit === 'g') return Math.max(0, num(fd.grams) || 0);
+  const gpt = num(fd.gpt); if (!gpt || gpt <= 0) return 0;
+  return Math.max(0, (num(fd.qty) || 0) * gpt / SPOON_DIV[fd.unit]);
+}
 function vFood(q) {
   const ds = q.d || todayStr();
   if (!fd || fd.key !== location.hash) {
     if (q.edit != null) {
       const e = (S.log[ds] || { entries: [] }).entries[Number(q.edit)];
       if (!e) { go('/?d=' + ds); return ''; }
-      fd = { key: location.hash, src: e.src, id: e.ref, grams: e.grams, meal: e.meal, approx: !!e.approx, edit: Number(q.edit) };
+      const sp = spoonFor(e.src, e.ref);
+      fd = { key: location.hash, src: e.src, id: e.ref, grams: e.grams, meal: e.meal, approx: !!e.approx, edit: Number(q.edit), from: q.from || '',
+        unit: e.unit || 'g', qty: e.qty != null ? e.qty : 1, gpt: e.gpt || (sp ? sp.g : ''), gptOpen: false };
     } else {
       const last = S.recent.find(r => r.src === q.src && String(r.id) === String(q.id));
-      fd = { key: location.hash, src: q.src, id: q.src === 'c' ? Number(q.id) : q.id, grams: last ? last.grams : 100, meal: q.meal || defaultMeal(), approx: false, edit: null };
+      const id = q.src === 'c' ? Number(q.id) : q.id, sp = spoonFor(q.src, id);
+      fd = { key: location.hash, src: q.src, id, grams: last ? last.grams : 100, meal: q.meal || defaultMeal(), approx: false, edit: null, from: 'add',
+        unit: last && last.unit ? last.unit : 'g', qty: last && last.qty != null ? last.qty : 1, gpt: sp ? sp.g : '', gptOpen: false };
     }
   }
   const f = getFood(fd.src, fd.id); if (!f) return `<div class="head">${backBtn('/')}</div><p>${esc(t('noResults'))}</p>`;
   const pair = fd.src === 'c' ? PAIR.get(f.id) : null;
-  const g = Math.max(0, Number(fd.grams) || 0);
+  const g = fdGrams();
   const nn = f.n.map(v => v == null ? null : v * g / 100);
   let equiv = '';
   if (pair) {
     const other = getFood('c', pair.state === 'dry' ? pair.cooked : pair.dry);
     if (other && other.n[0]) equiv = pair.state === 'dry' ? t('onceCooked')(fmt(g * f.n[0] / other.n[0])) : t('beforeCooking')(fmt(g * f.n[0] / other.n[0]));
   }
-  const presets = [50, 100, 150, 200];
+  const spoon = fd.unit !== 'g', div = SPOON_DIV[fd.unit] || 1, gpt = num(fd.gpt);
+  const stepBtn = (a, v, lbl, ic) => `<button class="iconbtn" data-a="${a}" data-v="${v}" aria-label="${lbl}" style="border:1px solid var(--chip);border-radius:26px;width:52px;height:52px">${ic}</button>`;
+  const amount = spoon
+    ? `<div class="row between">${stepBtn('qStep', -0.5, '−½', icon.minus)}
+        <label class="row" style="justify-content:center;gap:6px;align-items:baseline"><span class="sr">${esc(t(fd.unit + 'Long'))}</span><input id="qty" class="huge" inputmode="decimal" data-in="qty" value="${esc(fd.qty)}" style="width:110px;border:0;background:transparent;text-align:right;padding:0;outline:0"><span style="font-size:20px;color:var(--ink2);font-weight:500">${esc(t(fd.unit))}</span></label>
+        ${stepBtn('qStep', 0.5, '+½', icon.plus)}</div>
+      <div class="grid4">${[0.5, 1, 2, 3].map(p => `<button class="chip" data-a="qSet" data-v="${p}" aria-pressed="${num(fd.qty) === p}" style="border-radius:10px;height:40px"><span class="mono">${qtyLabel(p)}</span> ${esc(t(fd.unit))}</button>`).join('')}</div>
+      <span class="small muted" style="text-align:center" id="gEq">${gpt ? esc(t('gApprox')(fmt(g, 1))) : ''}</span>
+      ${!gpt || fd.gptOpen
+        ? `<label class="field"><span class="lbl">${esc(t('spoonAsk')(t(fd.unit + 'Long')))}</span><input id="gpt" class="input mono" inputmode="decimal" data-in="gpt" value="${gpt ? esc(Math.round(gpt / div * 10) / 10) : ''}" placeholder="g"><span class="xs muted">${esc(t('spoonHint'))}</span></label>`
+        : `<div class="row between" style="border-top:1px solid var(--line2);padding-top:10px"><span class="small"><span class="mono">${esc(t('spoonIs')(t(fd.unit), fmt(gpt / div, 1)))}</span> <span class="muted">· ${esc(gpt === spoonDefault(fd.src, fd.id) ? t('spoonTypical') : t('spoonMine'))}</span></span><button class="btn ghost" data-a="gptEdit" style="width:auto;height:36px;padding:0 4px;font-size:14px">${esc(t('change'))}</button></div>`}`
+    : `<div class="row between">${stepBtn('gStep', -10, '−10 g', icon.minus)}
+        <label class="row" style="justify-content:center;gap:4px;align-items:baseline"><span class="sr">${esc(t('grams'))}</span><input id="grams" class="huge" inputmode="decimal" data-in="grams" value="${esc(fd.grams)}" style="width:150px;border:0;background:transparent;text-align:right;padding:0;outline:0"><span class="mono" style="font-size:22px;color:var(--ink2)">g</span></label>
+        ${stepBtn('gStep', 10, '+10 g', icon.plus)}</div>
+      <div class="grid4">${[50, 100, 150, 200].map(p => `<button class="chip mono" data-a="gSet" data-v="${p}" aria-pressed="${g === p}" style="border-radius:10px;height:40px">${p} g</button>`).join('')}</div>`;
   const m = (k, i, d = 1) => `<div class="card col" style="gap:4px;padding:10px"><span class="xs muted">${esc(t(k))}</span><span class="mono" style="font-size:15px">${nn[i] == null ? '–' : fmt(nn[i], d)} g</span></div>`;
-  const back = fd.edit != null ? '/?d=' + ds : `/add?meal=${fd.meal}&d=${ds}`;
+  const back = fd.edit != null && fd.from !== 'add' ? '/?d=' + ds : `/add?meal=${fd.meal}&d=${ds}`;
   return `<div class="head">${backBtn(back)}<div class="col" style="gap:2px"><h1 style="font-size:20px;line-height:1.25">${esc(f.name)}</h1><span class="xs muted">${esc(t('per100src'))} · ${esc(f.tag)}${fd.src === 'c' ? ' 2025 · #' + f.id : ''}</span></div></div>
     ${pair ? `<div class="field"><span class="lbl">${esc(t('iWeighed'))}</span><div class="seg"><button data-a="pairSwitch" data-v="dry" aria-pressed="${pair.state === 'dry'}">${esc(t('dry'))}</button><button data-a="pairSwitch" data-v="cooked" aria-pressed="${pair.state === 'cooked'}">${esc(t('cooked'))}</button></div></div>` : ''}
+    <div class="seg" role="group" aria-label="${esc(t('measureIn'))}">${['g', 'tsp', 'tbsp'].map(u => `<button data-a="unitSet" data-v="${u}" aria-pressed="${fd.unit === u}">${esc(t({ g: 'segG', tsp: 'segTsp', tbsp: 'segTbsp' }[u]))}</button>`).join('')}</div>
     <div class="card col" style="gap:14px;padding:16px">
-      <div class="row between"><button class="iconbtn" data-a="gStep" data-v="-10" aria-label="−10 g" style="border:1px solid var(--chip);border-radius:26px;width:52px;height:52px">${icon.minus}</button>
-        <label class="row" style="justify-content:center;gap:4px;align-items:baseline"><span class="sr">${esc(t('grams'))}</span><input id="grams" class="huge" inputmode="decimal" data-in="grams" value="${esc(fd.grams)}" style="width:150px;border:0;background:transparent;text-align:right;padding:0;outline:0"><span class="mono" style="font-size:22px;color:var(--ink2)">g</span></label>
-        <button class="iconbtn" data-a="gStep" data-v="10" aria-label="+10 g" style="border:1px solid var(--chip);border-radius:26px;width:52px;height:52px">${icon.plus}</button></div>
-      <div class="grid4">${presets.map(p => `<button class="chip mono" data-a="gSet" data-v="${p}" aria-pressed="${g === p}" style="border-radius:10px;height:40px">${p} g</button>`).join('')}</div>
+      ${amount}
       ${equiv ? `<span class="small muted" style="text-align:center" id="equiv">${esc(equiv)}</span>` : ''}
     </div>
     <div class="row between" style="padding:0 4px;align-items:baseline"><span style="font-weight:600">${esc(t('thisPortion'))}</span><span><span class="mono" style="font-size:28px;font-weight:500" id="kcal">${nn[0] == null ? '–' : fmt(nn[0])}</span> <span class="small muted">kcal</span></span></div>
@@ -501,13 +602,15 @@ function vFood(q) {
       ${fd.edit != null ? `<button class="btn danger" data-a="logDel" data-d="${ds}">${esc(t('remove'))}</button>` : ''}</div>`;
 }
 function updateFoodLive() {
-  const f = getFood(fd.src, fd.id); const g = Math.max(0, Number(String(fd.grams).replace(',', '.')) || 0);
+  const f = getFood(fd.src, fd.id); const g = fdGrams();
   const nn = f.n.map(v => v == null ? null : v * g / 100);
   const k = document.getElementById('kcal'); if (k) k.textContent = nn[0] == null ? '–' : fmt(nn[0]);
   const ms = document.querySelectorAll('#macros .mono'); [1, 2, 3, 5].forEach((i, j) => { if (ms[j]) ms[j].textContent = (nn[i] == null ? '–' : fmt(nn[i], 1)) + ' g'; });
   const pair = fd.src === 'c' ? PAIR.get(f.id) : null; const eq = document.getElementById('equiv');
   if (pair && eq) { const o = getFood('c', pair.state === 'dry' ? pair.cooked : pair.dry); eq.textContent = pair.state === 'dry' ? t('onceCooked')(fmt(g * f.n[0] / o.n[0])) : t('beforeCooking')(fmt(g * f.n[0] / o.n[0])); }
+  const ge = document.getElementById('gEq'); if (ge) ge.textContent = num(fd.gpt) ? t('gApprox')(fmt(g, 1)) : '';
   document.querySelectorAll('[data-a="gSet"]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === g)));
+  document.querySelectorAll('[data-a="qSet"]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === num(fd.qty))));
   const sb = document.querySelector('[data-a="logSave"]'); if (sb) sb.disabled = !(g > 0);
 }
 
@@ -668,7 +771,7 @@ function vSettings() {
     <div class="col" style="gap:6px"><span class="sectionlbl">${esc(t('sBackup'))}</span><div class="card col" style="gap:10px"><p class="xs muted">${esc(t('offline'))}</p><button class="btn secondary" data-a="export">${esc(t('sExport'))}</button><label class="btn secondary" style="cursor:pointer">${esc(t('sImport'))}<input type="file" accept="application/json,.json" data-a="import" class="sr"></label></div></div>
     <a class="btn ghost" href="#/about">${esc(t('sAbout'))}</a>
     <button class="btn danger" data-a="reset">${esc(t('sReset'))}</button>
-    <p class="xs muted" style="text-align:center">Plain Plate v0.1 · ${esc(t('installHint'))}</p>`;
+    <p class="xs muted" style="text-align:center">Plain Plate v0.2 · ${esc(t('installHint'))}</p>`;
 }
 let own = null;
 function vOwn() {
@@ -711,20 +814,29 @@ document.addEventListener('click', e => {
       break;
     case 'obOwn': S.profile = obProfile(); S.lang = ob.lang; save(); break;
     case 'toggleMore': ui.moreOpen = !ui.moreOpen; render(); break;
+    case 'toggleSum': S.sumOpen = !S.sumOpen; save(); render(); break;
     case 'toggleType': { const ds = el.dataset.d; const L = S.log[ds] || (S.log[ds] = { entries: [], complete: false }); const cur = dayInfo(ds).workout; L.type = cur ? 'rest' : 'workout'; save(); render(); break; }
-    case 'pairSwitch': { const p = PAIR.get(fd.id); if (p && p.state !== v) { const f = getFood('c', fd.id); const o = getFood('c', v === 'dry' ? p.dry : p.cooked); fd.grams = Math.round((Number(fd.grams) || 0) * f.n[0] / o.n[0]); fd.id = o.id; render(); } break; }
+    case 'pairSwitch': { const p = PAIR.get(fd.id); if (p && p.state !== v) { const f = getFood('c', fd.id); const o = getFood('c', v === 'dry' ? p.dry : p.cooked); fd.grams = Math.round(fdGrams() * f.n[0] / o.n[0]); fd.unit = 'g'; fd.id = o.id; const sp = spoonFor('c', o.id); fd.gpt = sp ? sp.g : ''; fd.gptOpen = false; render(); } break; }
+    case 'unitSet': if (fd.unit !== v) { if (v === 'g') fd.grams = Math.round(fdGrams()) || fd.grams; else if (fd.unit === 'g') fd.qty = 1; fd.unit = v; fd.gptOpen = false; render(); } break;
+    case 'qStep': fd.qty = Math.max(0, (num(fd.qty) || 0) + Number(v)); document.getElementById('qty').value = fd.qty; updateFoodLive(); break;
+    case 'qSet': fd.qty = Number(v); document.getElementById('qty').value = fd.qty; updateFoodLive(); break;
+    case 'gptEdit': fd.gptOpen = true; render(); { const gi = document.getElementById('gpt'); if (gi) { gi.focus(); gi.select(); } } break;
     case 'gStep': fd.grams = Math.max(0, (Number(String(fd.grams).replace(',', '.')) || 0) + Number(v)); document.getElementById('grams').value = fd.grams; updateFoodLive(); break;
     case 'gSet': fd.grams = Number(v); document.getElementById('grams').value = fd.grams; updateFoodLive(); break;
     case 'mealSet': fd.meal = v; render(); break;
     case 'logSave': {
       const ds = el.dataset.d; const f = getFood(fd.src, fd.id); const L = S.log[ds] || (S.log[ds] = { entries: [], complete: false });
       const pair = fd.src === 'c' ? PAIR.get(f.id) : null;
-      const entry = { src: fd.src, ref: f.id, name: f.name, tag: f.tag, n: f.n, grams: Number(String(fd.grams).replace(',', '.')), meal: fd.meal, approx: fd.approx, state: pair ? pair.state : null, at: Date.now() };
+      const spoon = fd.unit !== 'g', gpt = num(fd.gpt);
+      const entry = { src: fd.src, ref: f.id, name: f.name, tag: f.tag, n: f.n, grams: Math.round(fdGrams() * 10) / 10, meal: fd.meal, approx: fd.approx, state: pair ? pair.state : null, at: fd.edit != null && L.entries[fd.edit] ? L.entries[fd.edit].at : Date.now() };
+      if (spoon) { entry.unit = fd.unit; entry.qty = num(fd.qty); entry.gpt = gpt; const key = foodKey(fd.src, f.id); if (gpt === spoonDefault(fd.src, f.id)) delete S.spoon[key]; else S.spoon[key] = gpt; }
       if (fd.edit != null) L.entries[fd.edit] = entry; else L.entries.push(entry);
-      S.recent = [{ src: fd.src, id: f.id, grams: entry.grams }, ...S.recent.filter(r => !(r.src === fd.src && String(r.id) === String(f.id)))].slice(0, 30);
-      save(); toast(t('toastAdded')); go('/?d=' + ds); break;
+      S.recent = [{ src: fd.src, id: f.id, grams: spoon ? (S.recent.find(r => r.src === fd.src && String(r.id) === String(f.id)) || { grams: 100 }).grams : entry.grams, unit: fd.unit, qty: spoon ? entry.qty : null }, ...S.recent.filter(r => !(r.src === fd.src && String(r.id) === String(f.id)))].slice(0, 30);
+      save();
+      if (fd.edit != null && fd.from !== 'add') { toast(t('saved')); go('/?d=' + ds); } else { toast(fd.edit != null ? t('saved') : t('addedTo')(t(fd.meal).toLowerCase())); go(`/add?meal=${fd.meal}&d=${ds}`); }
+      break;
     }
-    case 'logDel': { const ds = el.dataset.d; S.log[ds].entries.splice(fd.edit, 1); save(); toast(t('toastRemoved')); go('/?d=' + ds); break; }
+    case 'logDel': { const ds = el.dataset.d; S.log[ds].entries.splice(fd.edit, 1); save(); toast(t('toastRemoved')); go(fd.from === 'add' ? `/add?meal=${fd.meal}&d=${ds}` : '/?d=' + ds); break; }
     case 'mfSave': {
       const n = mf.n.map(x => num(x)); const id = mf.id || 'm' + Date.now().toString(36);
       const obj = { id, name: mf.name.trim(), barcode: (mf.barcode || '').replace(/\D/g, '') || null, n, off: mf.off || false };
@@ -785,13 +897,15 @@ document.addEventListener('input', e => {
     const tmp = document.createElement('div'); tmp.innerHTML = vAdd(q); box.innerHTML = tmp.querySelector('#results').innerHTML;
   }
   if (k === 'grams') { fd.grams = el.value; updateFoodLive(); }
+  if (k === 'qty') { fd.qty = el.value; updateFoodLive(); }
+  if (k === 'gpt') { const x = num(el.value); fd.gpt = x && x > 0 ? Math.round(x * SPOON_DIV[fd.unit] * 100) / 100 : ''; updateFoodLive(); }
   if (k === 'mf') { const kk = el.dataset.k; if (kk.startsWith('n')) mf.n[Number(kk.slice(1))] = el.value; else mf[kk] = el.value; const sb = document.querySelector('[data-a="mfSave"]'); if (sb) sb.disabled = !(mf.name.trim() && num(mf.n[0]) != null); }
   if (k === 'bc') scanState.code = el.value;
   if (k === 'planAmt') { ui.plan.amount = el.value; el.style.width = (Math.max(2, el.value.length) + 0.5) + 'ch'; const tmp = document.createElement('div'); tmp.innerHTML = vPlanner({}); document.getElementById('plancards').innerHTML = tmp.querySelector('#plancards').innerHTML; }
   if (k === 'own') { own[el.dataset.k] = el.value; const c = calcTargets(S.profile || obProfile()); const low = Math.min(num(own.rest) || 99999, num(own.workout) || 99999) < c.bmr; document.getElementById('ownlow').innerHTML = low ? `<div class="note plain">${icon.info}<span>${esc(t('lowNote')(fmt(c.bmr)))}</span></div>` : ''; }
   if (k === 'proteinT') { S.profile.proteinT = num(el.value) || null; save(); }
 });
-function toast(msg) { const d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = msg; document.body.appendChild(d); setTimeout(() => d.remove(), 1800); }
+function toast(msg) { document.querySelectorAll('.toast').forEach(x => x.remove()); const d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = msg; document.body.appendChild(d); setTimeout(() => d.remove(), 1800); }
 
 /* ---------- Boot ---------- */
 (async function boot() {
